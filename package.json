@@ -1,0 +1,30 @@
+{
+  "name": "design-token-crawler",
+  "version": "1.0.0",
+  "description": "A tool to crawl websites and extract design tokens",
+  "main": "run.js",
+  "scripts": {
+    "start": "node run.js",
+    "crawl": "node run.js",
+    "crawl:list": "node run.js --list",
+    "crawl:force": "node run.js --force",
+    "crawl:yes": "node run.js -y",
+    "crawl:typography": "node run.js --only typography",
+    "crawl:colors": "node run.js --only colors",
+    "crawl:spacing": "node run.js --only spacing",
+    "crawl:borders": "node run.js --only borders",
+    "crawl:animations": "node run.js --only animations",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "nuke": "node run.js --nuke"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.40.0",
+    "commander": "^11.0.0",
+    "puppeteer": "^21.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  }
+}

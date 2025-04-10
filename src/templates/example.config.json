@@ -1,0 +1,29 @@
+{
+  "baseUrl": "http://localhost:8080",
+  "maxPages": 100,
+  "timeout": 30000,
+  "screenshotsEnabled": true,
+  "ignoreExtensions": [
+    ".pdf",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".svg",
+    ".css",
+    ".js",
+    ".zip",
+    ".tar",
+    ".gz"
+  ],
+  "ignorePatterns": [
+    "\\?",
+    "/admin/",
+    "/user/",
+    "/cart/",
+    "/checkout/",
+    "/search/"
+  ],
+  "respectRobotsTxt": true,
+  "twigDebugMode": false
+}

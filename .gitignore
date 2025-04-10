@@ -1,0 +1,6 @@
+results
+node_modules
+.crawl-cache.json
+.idea
+config.json
+coverage

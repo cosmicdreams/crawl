@@ -1,0 +1,47 @@
+{
+  "meta": {
+    "lastUpdated": "{{current_date}}",
+    "crawlReference": "{{crawl_id}}",
+    "version": "1.0.0"
+  },
+  "designPatterns": {
+    "colors": {
+      "primary": [],
+      "secondary": [],
+      "accent": [],
+      "neutral": [],
+      "inconsistencies": []
+    },
+    "typography": {
+      "headings": [],
+      "body": [],
+      "ui": [],
+      "inconsistencies": []
+    },
+    "spacing": {
+      "scales": [],
+      "inconsistencies": []
+    },
+    "components": {
+      "frequent": [],
+      "unique": [],
+      "inconsistent": [],
+      "consolidationOpportunities": []
+    }
+  },
+  "usageStatistics": {
+    "componentFrequency": {},
+    "colorUsage": {},
+    "fontUsage": {}
+  },
+  "insights": [
+    {
+      "id": "INSIGHT-001",
+      "category": "design-consistency",
+      "title": "Example Insight",
+      "description": "This is an example insight that would be generated after analysis.",
+      "impact": "medium",
+      "recommendation": "Consider standardizing this pattern across the site."
+    }
+  ]
+}
