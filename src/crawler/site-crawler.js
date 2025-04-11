@@ -2,8 +2,8 @@
 const { chromium } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
-const componentExtractor = require('./extract-components');
-const configManager = require('./utils/config-manager');
+const componentExtractor = require('../extractors/extract-components');
+const configManager = require('../utils/config-manager');
 
 /**
  * Site crawler using Playwright

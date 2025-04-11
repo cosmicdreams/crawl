@@ -110,18 +110,19 @@ describe('Color Extractor', () => {
       const originalLaunch = chromium.launch;
       chromium.launch = jest.fn().mockRejectedValue(new Error('Browser launch failed'));
       console.error = jest.fn(); // Mock console.error
+      process.exit = jest.fn(); // Mock process.exit
 
       try {
         // Execute
-        await extractColors.extractColorsFromCrawledPages();
+        await expect(extractColors.extractColorsFromCrawledPages()).rejects.toThrow('Browser launch failed');
 
         // Verify
         expect(chromium.launch).toHaveBeenCalled();
-        expect(console.error).toHaveBeenCalled();
         expect(fs.writeFileSync).not.toHaveBeenCalled();
       } finally {
         // Restore original function
         chromium.launch = originalLaunch;
+        process.exit.mockRestore();
       }
     });
   });
