@@ -1,6 +1,9 @@
 // @ts-check
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Design token generator
@@ -1796,13 +1799,15 @@ function loadExtractedData() {
   return data;
 }
 
-// If this script is run directly, execute the token generation
-if (require.main === module) {
-  generateDesignTokens().catch(error => {
-    console.error('Token generation failed:', error);
-    process.exit(1);
-  });
-}
-
-// Export the function for use in other scripts
-module.exports = { generateDesignTokens };
+// Export default as an object containing all functions
+export default {
+  generateTypographyTokens,
+  generateColorTokens,
+  generateSpacingTokens,
+  generateBorderTokens,
+  generateAnimationTokens,
+  generateDesignTokens,
+  generateCSSFiles,
+  generateJSONTokens,
+  loadExtractedData
+};

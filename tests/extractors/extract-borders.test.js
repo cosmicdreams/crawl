@@ -292,6 +292,8 @@ describe('Borders Extractor', () => {
 
       // Verify
       expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(mockPage.evaluate.mock.calls[0][0]).toBe(extractBorders.evaluateBorders);
+      expect(mockPage.evaluate.mock.calls[0][1]).toBeDefined(); // Config is passed
       expect(result).toHaveProperty('elementStyles');
       expect(result).toHaveProperty('borderWidths');
       expect(result).toHaveProperty('borderStyles');

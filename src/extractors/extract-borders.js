@@ -1,7 +1,11 @@
 // @ts-check
-const { chromium } = require('@playwright/test');
-const fs = require('fs');
-const path = require('path');
+import { chromium } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+import telemetryManager from '../utils/telemetry-manager.js';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Borders and shadows extractor using Playwright
@@ -9,9 +13,9 @@ const path = require('path');
  */
 
 // Default configuration
-const defaultConfig = {
+export const defaultConfig = {
   // Base URL of the site
-  baseUrl: process.env.SITE_DOMAIN || 'https://definitivehc.ddev.site',
+  baseUrl: process.env.SITE_DOMAIN,
 
   // Input file with crawl results
   inputFile: path.join(__dirname, '../../results/raw/crawl-results.json'),
@@ -52,21 +56,45 @@ const defaultConfig = {
 
   // Screenshots directory
   screenshotsDir: path.join(__dirname, '../../results/screenshots/borders'),
-  
+
   // Whether to write results to file
   writeToFile: true,
-  
+
   // Whether to generate visualizations
-  generateVisualizations: true
+  generateVisualizations: true,
+
+  // Telemetry options
+  telemetry: {
+    // Whether to use telemetry
+    enabled: true,
+
+    // Directory to store telemetry reports
+    outputDir: path.join(__dirname, '../../results/telemetry/borders'),
+
+    // Whether to log telemetry data to console
+    logToConsole: true,
+
+    // Whether to write telemetry data to file
+    writeToFile: true,
+
+    // Minimum duration (in ms) to log for operations
+    minDuration: 5,
+
+    // Whether to include timestamps in telemetry data
+    includeTimestamps: true,
+
+    // Whether to include memory usage in telemetry data
+    includeMemoryUsage: true
+  }
 };
 
 /**
- * Create a function to evaluate borders on a page
- * @param {Object} config - Configuration object
- * @returns {Function} - Function to be evaluated in the browser context
+ * Function to evaluate borders on a page
+ * This function is serialized and executed in the browser context
+ * @param {Object} config - Configuration object passed from Node.js
+ * @returns {Object} - Extracted border data
  */
-function createBordersEvaluationFunction(config) {
-  return function evaluateBorders() {
+function evaluateBorders(config) {
     const styles = {};
     const borderWidths = new Set();
     const borderStyles = new Set();
@@ -160,8 +188,8 @@ function createBordersEvaluationFunction(config) {
             if (rule.style) {
               for (let k = 0; k < rule.style.length; k++) {
                 const prop = rule.style[k];
-                if (prop.startsWith('--') && 
-                    (prop.includes('border') || prop.includes('shadow') || 
+                if (prop.startsWith('--') &&
+                    (prop.includes('border') || prop.includes('shadow') ||
                      prop.includes('radius') || prop.includes('outline'))) {
                   const value = rule.style.getPropertyValue(prop);
                   cssVars[prop] = value;
@@ -186,7 +214,6 @@ function createBordersEvaluationFunction(config) {
       shadows: Array.from(shadows),
       cssVars
     };
-  };
 }
 
 /**
@@ -197,8 +224,8 @@ function createBordersEvaluationFunction(config) {
  */
 async function extractBorders(page, config = defaultConfig) {
   try {
-    const evaluationFn = createBordersEvaluationFunction(config);
-    return await page.evaluate(evaluationFn);
+    // Pass the config to the evaluate function
+    return await page.evaluate(evaluateBorders, config);
   } catch (error) {
     console.error(`Error extracting borders: ${error.message}`);
     return {
@@ -220,26 +247,96 @@ async function extractBorders(page, config = defaultConfig) {
  * @returns {Promise<Object>} - Border data
  */
 async function extractBordersFromPage(page, url = null, config = defaultConfig) {
+  // Initialize telemetry if enabled
+  let telemetry = null;
+  if (config.telemetry && config.telemetry.enabled) {
+    telemetry = telemetryManager.initTelemetry(config.telemetry);
+  }
+
   try {
     if (url) {
+      // Record navigation in telemetry if enabled
+      let navigationTimerId;
+      if (telemetry) {
+        navigationTimerId = telemetry.startTimer('navigation', { url });
+      }
+
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+      // Stop navigation timer if started
+      if (telemetry && navigationTimerId) {
+        telemetry.stopTimer(navigationTimerId);
+      }
     }
-    
+
     // Extract borders
-    const borders = await extractBorders(page, config);
-    
-    return {
-      success: true,
-      data: borders
-    };
+    try {
+      // Record extraction in telemetry if enabled
+      let extractionTimerId;
+      if (telemetry) {
+        extractionTimerId = telemetry.startTimer('extract-borders', { url });
+      }
+
+      const borders = await extractBorders(page, config);
+
+      // Stop extraction timer if started
+      if (telemetry && extractionTimerId) {
+        telemetry.stopTimer(extractionTimerId, {
+          borderWidthsCount: borders.borderWidths.length,
+          borderStylesCount: borders.borderStyles.length,
+          borderRadiiCount: borders.borderRadii.length,
+          shadowsCount: borders.shadows.length,
+          cssVarsCount: Object.keys(borders.cssVars).length
+        });
+      }
+
+      return {
+        success: true,
+        data: borders,
+        telemetry: telemetry ? telemetry.getMetrics() : null
+      };
+    } catch (evalError) {
+      console.error(`Error extracting borders from page: ${evalError.message}`);
+
+      // Record error in telemetry if enabled
+      if (telemetry) {
+        telemetry.recordMetric('extraction-error', 0, {
+          url,
+          error: evalError.message,
+          type: evalError.name
+        });
+      }
+
+      return {
+        success: false,
+        error: {
+          message: evalError.message,
+          type: evalError.name,
+          stack: evalError.stack
+        },
+        telemetry: telemetry ? telemetry.getMetrics() : null
+      };
+    }
   } catch (error) {
+    console.error(`Error navigating to page: ${error.message}`);
+
+    // Record error in telemetry if enabled
+    if (telemetry) {
+      telemetry.recordMetric('navigation-error', 0, {
+        url,
+        error: error.message,
+        type: error.name
+      });
+    }
+
     return {
       success: false,
       error: {
         message: error.message,
         type: error.name,
         stack: error.stack
-      }
+      },
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   }
 }
@@ -264,8 +361,8 @@ async function generateBorderVisualization(page, borderData, screenshotsDir) {
         h1 { margin-bottom: 20px; }
         .section { margin-bottom: 40px; }
         .section h2 { margin-bottom: 10px; }
-        .example { 
-          display: flex; 
+        .example {
+          display: flex;
           align-items: center;
           margin-bottom: 10px;
         }
@@ -370,10 +467,23 @@ async function generateBorderVisualization(page, borderData, screenshotsDir) {
  * @param {Object} logger - Logger object (optional)
  * @returns {Promise<Object>} - Border results
  */
-async function extractBordersFromCrawledPages(customConfig = {}, browser = null, logger = console) {
+async function extractBordersFromCrawledPages(customConfig = {}, browser = null, logger ) {
+  // If logger is not provided, get a configured logger from config
+  if (!logger) {
+    const { getLogger } = await import('../utils/console-manager.js');
+    logger = getLogger(customConfig, 'colors');
+  }
+
   // Merge configurations
   const config = { ...defaultConfig, ...customConfig };
-  
+
+  // Initialize telemetry if enabled
+  let telemetry = null;
+  if (config.telemetry && config.telemetry.enabled) {
+    telemetry = telemetryManager.initTelemetry(config.telemetry);
+    logger.log('Telemetry collection enabled');
+  }
+
   logger.log('Starting border extraction...');
 
   // Variable to track if we should close the browser
@@ -407,12 +517,35 @@ async function extractBordersFromCrawledPages(customConfig = {}, browser = null,
 
     // Use provided browser or create a new one
     shouldCloseBrowser = !browser;
+
+    // Record browser creation in telemetry if enabled
+    let browserTimerId;
+    if (telemetry && !browser) {
+      browserTimerId = telemetry.startTimer('browser-launch', {});
+    }
+
     browser = browser || await chromium.launch();
-    
+
+    // Stop browser timer if started
+    if (telemetry && browserTimerId) {
+      telemetry.stopTimer(browserTimerId);
+    }
+
+    // Record context creation in telemetry if enabled
+    let contextTimerId;
+    if (telemetry) {
+      contextTimerId = telemetry.startTimer('context-creation', {});
+    }
+
     const context = await browser.newContext({
       ignoreHTTPSErrors: true,
       viewport: { width: 1920, height: 1080 }
     });
+
+    // Stop context timer if started
+    if (telemetry && contextTimerId) {
+      telemetry.stopTimer(contextTimerId);
+    }
 
     // Create a new page
     const page = await context.newPage();
@@ -435,14 +568,26 @@ async function extractBordersFromCrawledPages(customConfig = {}, browser = null,
       logger.log(`Analyzing page ${i + 1}/${pagesToAnalyze.length}: ${pageInfo.url}`);
 
       try {
-        // Extract borders from page
-        const { success, data, error } = await extractBordersFromPage(page, pageInfo.url, config);
-        
+        // Extract borders from page with telemetry if enabled
+        let result;
+        if (telemetry) {
+          result = await telemetryManager.withTelemetry(
+            () => extractBordersFromPage(page, pageInfo.url, config),
+            'extract-borders-page',
+            { url: pageInfo.url, index: i },
+            telemetry
+          );
+        } else {
+          result = await extractBordersFromPage(page, pageInfo.url, config);
+        }
+
+        const { success, data, error } = result;
+
         if (!success) {
           logger.error(`Error analyzing ${pageInfo.url}: ${error.message}`);
           continue;
         }
-        
+
         // Add to results
         results.pagesAnalyzed.push({
           url: pageInfo.url,
@@ -478,18 +623,76 @@ async function extractBordersFromCrawledPages(customConfig = {}, browser = null,
 
     // Generate border visualization if enabled
     if (config.generateVisualizations) {
-      await generateBorderVisualization(page, {
-        borderWidths: results.allBorderWidths,
-        borderStyles: results.allBorderStyles,
-        borderRadii: results.allBorderRadii,
-        shadows: results.allShadows
-      }, config.screenshotsDir);
+      try {
+        // Record visualization generation in telemetry if enabled
+        if (telemetry) {
+          await telemetryManager.withTelemetry(
+            () => generateBorderVisualization(page, {
+              borderWidths: results.allBorderWidths,
+              borderStyles: results.allBorderStyles,
+              borderRadii: results.allBorderRadii,
+              shadows: results.allShadows
+            }, config.screenshotsDir),
+            'generate-border-visualization',
+            {
+              borderWidthsCount: results.allBorderWidths.length,
+              borderStylesCount: results.allBorderStyles.length,
+              borderRadiiCount: results.allBorderRadii.length,
+              shadowsCount: results.allShadows.length
+            },
+            telemetry
+          );
+        } else {
+          await generateBorderVisualization(page, {
+            borderWidths: results.allBorderWidths,
+            borderStyles: results.allBorderStyles,
+            borderRadii: results.allBorderRadii,
+            shadows: results.allShadows
+          }, config.screenshotsDir);
+        }
+      } catch (error) {
+        logger.warn(`Could not generate border visualization: ${error.message}`);
+
+        // Record error in telemetry if enabled
+        if (telemetry) {
+          telemetry.recordMetric('visualization-error', 0, {
+            error: error.message,
+            type: error.name
+          });
+        }
+      }
     }
 
     // Save results to file if enabled
     if (config.writeToFile) {
-      fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
+      // Record file writing in telemetry if enabled
+      if (telemetry) {
+        await telemetryManager.withTelemetry(
+          () => {
+            fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
+            return true;
+          },
+          'write-results-file',
+          { outputFile: config.outputFile },
+          telemetry
+        );
+      } else {
+        fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
+      }
+
       logger.log(`Results saved to: ${config.outputFile}`);
+    }
+
+    // Generate telemetry report if enabled
+    if (telemetry) {
+      try {
+        const report = telemetry.generateReport('border-extraction', {
+          writeToFile: true
+        });
+        logger.log(`Telemetry report generated with ${report.summary.operationCount} operations`);
+      } catch (error) {
+        logger.error(`Error generating telemetry report: ${error.message}`);
+      }
     }
 
     logger.log('\nBorder extraction completed!');
@@ -501,17 +704,37 @@ async function extractBordersFromCrawledPages(customConfig = {}, browser = null,
 
     return {
       success: true,
-      data: results
+      data: results,
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   } catch (error) {
     logger.error(`Border extraction failed: ${error.message}`);
+
+    // Record error in telemetry if enabled
+    if (telemetry) {
+      telemetry.recordMetric('extraction-process-error', 0, {
+        error: error.message,
+        type: error.name
+      });
+
+      // Generate error telemetry report if enabled
+      try {
+        telemetry.generateReport('border-extraction-error', {
+          writeToFile: true
+        });
+      } catch (reportError) {
+        logger.error(`Error generating telemetry report: ${reportError.message}`);
+      }
+    }
+
     return {
       success: false,
       error: {
         message: error.message,
         type: error.name,
         stack: error.stack
-      }
+      },
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   } finally {
     // Only close the browser if we created it
@@ -521,23 +744,28 @@ async function extractBordersFromCrawledPages(customConfig = {}, browser = null,
   }
 }
 
-// If this script is run directly, execute the extraction
-if (require.main === module) {
-  extractBordersFromCrawledPages().then(result => {
-    if (!result.success) {
-      console.error('Border extraction failed:', result.error.message);
-      process.exit(1);
-    }
-  }).catch(error => {
-    console.error('Border extraction failed:', error);
-    process.exit(1);
-  });
+async function run() {
+  // If this script is run directly, execute the extraction
+  if (import.meta.url === new URL(import.meta.url).href) {
+    extractBordersFromCrawledPages().then(result => {
+      if (!result.success) {
+        console.error('Border extraction failed:', result.error.message);
+        process.exitCode = 1;
+      }
+    }).catch(error => {
+      console.error('Border extraction failed:', error);
+      process.exitCode = 1;
+    });
+  }
 }
 
-// Export the functions for use in other scripts
-module.exports = {
-  extractBordersFromCrawledPages,
-  extractBordersFromPage,
+// Main export function for the borders extractor
+export default extractBordersFromCrawledPages;
+
+// For named exports
+export {
   extractBorders,
-  defaultConfig
+  extractBordersFromPage,
+  extractBordersFromCrawledPages,
+  generateBorderVisualization
 };

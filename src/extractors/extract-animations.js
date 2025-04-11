@@ -1,17 +1,24 @@
 // @ts-check
-const { chromium } = require('@playwright/test');
-const fs = require('fs');
-const path = require('path');
+import { chromium } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import telemetryManager from '../utils/telemetry-manager.js';
 
 /**
  * Animations extractor using Playwright
  * This script extracts animation and transition styles from the crawled pages
  */
 
+// Get the current file's directory (ES modules don't have __dirname)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // Default configuration
-const defaultConfig = {
+export const defaultConfig = {
   // Base URL of the site
-  baseUrl: process.env.SITE_DOMAIN || 'https://definitivehc.ddev.site',
+  baseUrl: process.env.SITE_DOMAIN,
 
   // Input file with crawl results
   inputFile: path.join(__dirname, '../../results/raw/crawl-results.json'),
@@ -49,21 +56,45 @@ const defaultConfig = {
 
   // Screenshots directory
   screenshotsDir: path.join(__dirname, '../../results/screenshots/animations'),
-  
+
   // Whether to write results to file
   writeToFile: true,
-  
+
   // Whether to generate visualizations
-  generateVisualizations: true
+  generateVisualizations: true,
+
+  // Telemetry options
+  telemetry: {
+    // Whether to use telemetry
+    enabled: true,
+
+    // Directory to store telemetry reports
+    outputDir: path.join(__dirname, '../../results/telemetry/animations'),
+
+    // Whether to log telemetry data to console
+    logToConsole: true,
+
+    // Whether to write telemetry data to file
+    writeToFile: true,
+
+    // Minimum duration (in ms) to log for operations
+    minDuration: 5,
+
+    // Whether to include timestamps in telemetry data
+    includeTimestamps: true,
+
+    // Whether to include memory usage in telemetry data
+    includeMemoryUsage: true
+  }
 };
 
 /**
- * Create a function to evaluate animations on a page
- * @param {Object} config - Configuration object
- * @returns {Function} - Function to be evaluated in the browser context
+ * Function to evaluate animations on a page
+ * This function is serialized and executed in the browser context
+ * @param {Object} config - Configuration object passed from Node.js
+ * @returns {Object} - Extracted animation data
  */
-function createAnimationsEvaluationFunction(config) {
-  return function evaluateAnimations() {
+function evaluateAnimations(config) {
     const styles = {};
     const durations = new Set();
     const timingFunctions = new Set();
@@ -155,34 +186,34 @@ function createAnimationsEvaluationFunction(config) {
 
           for (let j = 0; j < rules.length; j++) {
             const rule = rules[j];
-            
+
             // Check if it's a keyframes rule
             if (rule.type === CSSRule.KEYFRAMES_RULE) {
               const name = rule.name;
               keyframes[name] = {};
-              
+
               // Extract keyframes
               for (let k = 0; k < rule.cssRules.length; k++) {
                 const keyframeRule = rule.cssRules[k];
                 const keyText = keyframeRule.keyText; // e.g., "0%", "50%", "from", "to"
-                
+
                 // Extract styles for this keyframe
                 const styles = {};
                 for (let l = 0; l < keyframeRule.style.length; l++) {
                   const prop = keyframeRule.style[l];
                   styles[prop] = keyframeRule.style.getPropertyValue(prop);
                 }
-                
+
                 keyframes[name][keyText] = styles;
               }
             }
-            
+
             // Extract CSS variables related to animations
             if (rule.style) {
               for (let k = 0; k < rule.style.length; k++) {
                 const prop = rule.style[k];
-                if (prop.startsWith('--') && 
-                    (prop.includes('animation') || prop.includes('transition') || 
+                if (prop.startsWith('--') &&
+                    (prop.includes('animation') || prop.includes('transition') ||
                      prop.includes('duration') || prop.includes('delay'))) {
                   const value = rule.style.getPropertyValue(prop);
                   cssVars[prop] = value;
@@ -207,7 +238,6 @@ function createAnimationsEvaluationFunction(config) {
       keyframes,
       cssVars
     };
-  };
 }
 
 /**
@@ -218,8 +248,8 @@ function createAnimationsEvaluationFunction(config) {
  */
 async function extractAnimations(page, config = defaultConfig) {
   try {
-    const evaluationFn = createAnimationsEvaluationFunction(config);
-    return await page.evaluate(evaluationFn);
+    // Pass the config to the evaluate function
+    return await page.evaluate(evaluateAnimations, config);
   } catch (error) {
     console.error(`Error extracting animations: ${error.message}`);
     return {
@@ -241,26 +271,96 @@ async function extractAnimations(page, config = defaultConfig) {
  * @returns {Promise<Object>} - Animation data
  */
 async function extractAnimationsFromPage(page, url = null, config = defaultConfig) {
+  // Initialize telemetry if enabled
+  let telemetry = null;
+  if (config.telemetry && config.telemetry.enabled) {
+    telemetry = telemetryManager.initTelemetry(config.telemetry);
+  }
+
   try {
     if (url) {
+      // Record navigation in telemetry if enabled
+      let navigationTimerId;
+      if (telemetry) {
+        navigationTimerId = telemetry.startTimer('navigation', { url });
+      }
+
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+      // Stop navigation timer if started
+      if (telemetry && navigationTimerId) {
+        telemetry.stopTimer(navigationTimerId);
+      }
     }
-    
+
     // Extract animations
-    const animations = await extractAnimations(page, config);
-    
-    return {
-      success: true,
-      data: animations
-    };
+    try {
+      // Record extraction in telemetry if enabled
+      let extractionTimerId;
+      if (telemetry) {
+        extractionTimerId = telemetry.startTimer('extract-animations', { url });
+      }
+
+      const animations = await extractAnimations(page, config);
+
+      // Stop extraction timer if started
+      if (telemetry && extractionTimerId) {
+        telemetry.stopTimer(extractionTimerId, {
+          durationsCount: animations.durations.length,
+          timingFunctionsCount: animations.timingFunctions.length,
+          delaysCount: animations.delays.length,
+          keyframesCount: Object.keys(animations.keyframes).length,
+          cssVarsCount: Object.keys(animations.cssVars).length
+        });
+      }
+
+      return {
+        success: true,
+        data: animations,
+        telemetry: telemetry ? telemetry.getMetrics() : null
+      };
+    } catch (evalError) {
+      console.error(`Error extracting animations from page: ${evalError.message}`);
+
+      // Record error in telemetry if enabled
+      if (telemetry) {
+        telemetry.recordMetric('extraction-error', 0, {
+          url,
+          error: evalError.message,
+          type: evalError.name
+        });
+      }
+
+      return {
+        success: false,
+        error: {
+          message: evalError.message,
+          type: evalError.name,
+          stack: evalError.stack
+        },
+        telemetry: telemetry ? telemetry.getMetrics() : null
+      };
+    }
   } catch (error) {
+    console.error(`Error navigating to page: ${error.message}`);
+
+    // Record error in telemetry if enabled
+    if (telemetry) {
+      telemetry.recordMetric('navigation-error', 0, {
+        url,
+        error: error.message,
+        type: error.name
+      });
+    }
+
     return {
       success: false,
       error: {
         message: error.message,
         type: error.name,
         stack: error.stack
-      }
+      },
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   }
 }
@@ -285,8 +385,8 @@ async function generateAnimationVisualization(page, animationData, screenshotsDi
         h1 { margin-bottom: 20px; }
         .section { margin-bottom: 40px; }
         .section h2 { margin-bottom: 10px; }
-        .example { 
-          display: flex; 
+        .example {
+          display: flex;
           align-items: center;
           margin-bottom: 20px;
         }
@@ -299,7 +399,7 @@ async function generateAnimationVisualization(page, animationData, screenshotsDi
         .example-label {
           font-family: monospace;
         }
-        
+
         /* Animation examples */
         .fade-in {
           animation: fadeIn 2s ease-in-out;
@@ -308,7 +408,7 @@ async function generateAnimationVisualization(page, animationData, screenshotsDi
           from { opacity: 0; }
           to { opacity: 1; }
         }
-        
+
         .pulse {
           animation: pulse 1.5s ease-in-out infinite;
         }
@@ -317,7 +417,7 @@ async function generateAnimationVisualization(page, animationData, screenshotsDi
           50% { transform: scale(1.1); }
           100% { transform: scale(1); }
         }
-        
+
         .slide-in {
           animation: slideIn 1s ease-out;
         }
@@ -403,10 +503,22 @@ async function generateAnimationVisualization(page, animationData, screenshotsDi
  * @param {Object} logger - Logger object (optional)
  * @returns {Promise<Object>} - Animation results
  */
-async function extractAnimationsFromCrawledPages(customConfig = {}, browser = null, logger = console) {
+async function extractAnimationsFromCrawledPages(customConfig = {}, browser = null, logger ) {
+  // If logger is not provided, get a configured logger from config
+  if (!logger) {
+    const { getLogger } = await import('../utils/console-manager.js');
+    logger = getLogger(customConfig, 'colors');
+  }
   // Merge configurations
   const config = { ...defaultConfig, ...customConfig };
-  
+
+  // Initialize telemetry if enabled
+  let telemetry = null;
+  if (config.telemetry && config.telemetry.enabled) {
+    telemetry = telemetryManager.initTelemetry(config.telemetry);
+    logger.log('Telemetry collection enabled');
+  }
+
   logger.log('Starting animation extraction...');
 
   // Variable to track if we should close the browser
@@ -440,12 +552,35 @@ async function extractAnimationsFromCrawledPages(customConfig = {}, browser = nu
 
     // Use provided browser or create a new one
     shouldCloseBrowser = !browser;
+
+    // Record browser creation in telemetry if enabled
+    let browserTimerId;
+    if (telemetry && !browser) {
+      browserTimerId = telemetry.startTimer('browser-launch', {});
+    }
+
     browser = browser || await chromium.launch();
-    
+
+    // Stop browser timer if started
+    if (telemetry && browserTimerId) {
+      telemetry.stopTimer(browserTimerId);
+    }
+
+    // Record context creation in telemetry if enabled
+    let contextTimerId;
+    if (telemetry) {
+      contextTimerId = telemetry.startTimer('context-creation', {});
+    }
+
     const context = await browser.newContext({
       ignoreHTTPSErrors: true,
       viewport: { width: 1920, height: 1080 }
     });
+
+    // Stop context timer if started
+    if (telemetry && contextTimerId) {
+      telemetry.stopTimer(contextTimerId);
+    }
 
     // Create a new page
     const page = await context.newPage();
@@ -468,14 +603,26 @@ async function extractAnimationsFromCrawledPages(customConfig = {}, browser = nu
       logger.log(`Analyzing page ${i + 1}/${pagesToAnalyze.length}: ${pageInfo.url}`);
 
       try {
-        // Extract animations from page
-        const { success, data, error } = await extractAnimationsFromPage(page, pageInfo.url, config);
-        
+        // Extract animations from page with telemetry if enabled
+        let result;
+        if (telemetry) {
+          result = await telemetryManager.withTelemetry(
+            () => extractAnimationsFromPage(page, pageInfo.url, config),
+            'extract-animations-page',
+            { url: pageInfo.url, index: i },
+            telemetry
+          );
+        } else {
+          result = await extractAnimationsFromPage(page, pageInfo.url, config);
+        }
+
+        const { success, data, error } = result;
+
         if (!success) {
           logger.error(`Error analyzing ${pageInfo.url}: ${error.message}`);
           continue;
         }
-        
+
         // Add to results
         results.pagesAnalyzed.push({
           url: pageInfo.url,
@@ -512,17 +659,73 @@ async function extractAnimationsFromCrawledPages(customConfig = {}, browser = nu
 
     // Generate animation visualization if enabled
     if (config.generateVisualizations) {
-      await generateAnimationVisualization(page, {
-        durations: results.allDurations,
-        timingFunctions: results.allTimingFunctions,
-        keyframes: results.keyframes
-      }, config.screenshotsDir);
+      try {
+        // Record visualization generation in telemetry if enabled
+        if (telemetry) {
+          await telemetryManager.withTelemetry(
+            () => generateAnimationVisualization(page, {
+              durations: results.allDurations,
+              timingFunctions: results.allTimingFunctions,
+              keyframes: results.keyframes
+            }, config.screenshotsDir),
+            'generate-animation-visualization',
+            {
+              durationsCount: results.allDurations.length,
+              timingFunctionsCount: results.allTimingFunctions.length,
+              keyframesCount: Object.keys(results.keyframes).length
+            },
+            telemetry
+          );
+        } else {
+          await generateAnimationVisualization(page, {
+            durations: results.allDurations,
+            timingFunctions: results.allTimingFunctions,
+            keyframes: results.keyframes
+          }, config.screenshotsDir);
+        }
+      } catch (error) {
+        logger.warn(`Could not generate animation visualization: ${error.message}`);
+
+        // Record error in telemetry if enabled
+        if (telemetry) {
+          telemetry.recordMetric('visualization-error', 0, {
+            error: error.message,
+            type: error.name
+          });
+        }
+      }
     }
 
     // Save results to file if enabled
     if (config.writeToFile) {
-      fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
+      // Record file writing in telemetry if enabled
+      if (telemetry) {
+        await telemetryManager.withTelemetry(
+          () => {
+            fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
+            return true;
+          },
+          'write-results-file',
+          { outputFile: config.outputFile },
+          telemetry
+        );
+      } else {
+        fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
+      }
+
       logger.log(`Results saved to: ${config.outputFile}`);
+    }
+
+    // Generate telemetry report if enabled
+    if (telemetry) {
+      try {
+        const report = telemetry.generateReport('animation-extraction', {
+          writeToFile: true
+        });
+        logger.log(`Telemetry report generated with ${report.summary.operationCount} operations`);
+      } catch (error) {
+        logger.error(`Error generating telemetry report: ${error.message}`);
+      }
     }
 
     logger.log('\nAnimation extraction completed!');
@@ -533,17 +736,37 @@ async function extractAnimationsFromCrawledPages(customConfig = {}, browser = nu
 
     return {
       success: true,
-      data: results
+      data: results,
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   } catch (error) {
     logger.error(`Animation extraction failed: ${error.message}`);
+
+    // Record error in telemetry if enabled
+    if (telemetry) {
+      telemetry.recordMetric('extraction-process-error', 0, {
+        error: error.message,
+        type: error.name
+      });
+
+      // Generate error telemetry report if enabled
+      try {
+        telemetry.generateReport('animation-extraction-error', {
+          writeToFile: true
+        });
+      } catch (reportError) {
+        logger.error(`Error generating telemetry report: ${reportError.message}`);
+      }
+    }
+
     return {
       success: false,
       error: {
         message: error.message,
         type: error.name,
         stack: error.stack
-      }
+      },
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   } finally {
     // Only close the browser if we created it
@@ -553,23 +776,27 @@ async function extractAnimationsFromCrawledPages(customConfig = {}, browser = nu
   }
 }
 
-// If this script is run directly, execute the extraction
-if (require.main === module) {
-  extractAnimationsFromCrawledPages().then(result => {
-    if (!result.success) {
-      console.error('Animation extraction failed:', result.error.message);
-      process.exit(1);
-    }
-  }).catch(error => {
-    console.error('Animation extraction failed:', error);
-    process.exit(1);
-  });
+async function run() {
+  // If this script is run directly, execute the extraction
+  if (import.meta.url === new URL(import.meta.url).href) {
+    extractAnimationsFromCrawledPages().then(result => {
+      if (!result.success) {
+        console.error('Animation extraction failed:', result.error.message);
+        process.exitCode = 1;
+      }
+    }).catch(error => {
+      console.error('Animation extraction failed:', error);
+      process.exitCode = 1;
+    });
+  }
 }
+// Main export function for the animations extractor
+export default extractAnimationsFromCrawledPages;
 
-// Export the functions for use in other scripts
-module.exports = {
-  extractAnimationsFromCrawledPages,
-  extractAnimationsFromPage,
+// For named exports
+export {
   extractAnimations,
-  defaultConfig
+  extractAnimationsFromPage,
+  extractAnimationsFromCrawledPages,
+  generateAnimationVisualization
 };

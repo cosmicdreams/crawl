@@ -2,7 +2,7 @@
 id: ISSUE-002
 title: Inconsistent Property Naming in Color Extractor
 created: 2023-07-10
-status: open
+status: resolved
 severity: low
 category: code-organization
 related_components: extractors

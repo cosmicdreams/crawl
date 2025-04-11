@@ -1,17 +1,24 @@
 // @ts-check
-const { chromium } = require('@playwright/test');
-const fs = require('fs');
-const path = require('path');
+import { chromium } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import telemetryManager from '../utils/telemetry-manager.js';
 
 /**
  * Spacing extractor using Playwright
  * This script extracts spacing-related CSS from the crawled pages
  */
 
+// Get the current file's directory (ES modules don't have __dirname)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 // Default configuration
-const defaultConfig = {
+export const defaultConfig = {
   // Base URL of the site
-  baseUrl: process.env.SITE_DOMAIN || 'https://definitivehc.ddev.site',
+  baseUrl: process.env.SITE_DOMAIN,
 
   // Input file with crawl results
   inputFile: path.join(__dirname, '../../results/raw/crawl-results.json'),
@@ -60,115 +67,138 @@ const defaultConfig = {
   writeToFile: true,
 
   // Whether to generate visualizations
-  generateVisualizations: true
+  generateVisualizations: true,
+
+  // Telemetry options
+  telemetry: {
+    // Whether to use telemetry
+    enabled: true,
+
+    // Directory to store telemetry reports
+    outputDir: path.join(__dirname, '../../results/telemetry/spacing'),
+
+    // Whether to log telemetry data to console
+    logToConsole: true,
+
+    // Whether to write telemetry data to file
+    writeToFile: true,
+
+    // Minimum duration (in ms) to log for operations
+    minDuration: 5,
+
+    // Whether to include timestamps in telemetry data
+    includeTimestamps: true,
+
+    // Whether to include memory usage in telemetry data
+    includeMemoryUsage: true
+  }
 };
 
 /**
- * Create a function to evaluate spacing on a page
- * @param {Object} config - Configuration object
- * @returns {Function} - Function to be evaluated in the browser context
+ * Function to evaluate spacing on a page
+ * This function is serialized and executed in the browser context
+ * @param {Object} config - Configuration object passed from Node.js
+ * @returns {Object} - Extracted spacing data
  */
-function createSpacingEvaluationFunction(config) {
-  return function evaluateSpacing() {
-    const styles = {};
-    const spacingValues = new Set();
-    const cssVars = {};
+function evaluateSpacing(config) {
+  const styles = {};
+  const spacingValues = new Set();
+  const cssVars = {};
 
-    // Helper function to get computed style for an element
-    function getComputedStyleForElement(element, selector) {
-      const styleObj = {};
-      const computedStyle = window.getComputedStyle(element);
+  // Helper function to get computed style for an element
+  function getComputedStyleForElement(element, selector) {
+    const styleObj = {};
+    const computedStyle = window.getComputedStyle(element);
 
-      // Extract only spacing-related properties
-      for (const prop of config.cssProperties) {
-        const value = computedStyle.getPropertyValue(prop);
-        if (value && value !== 'none' && value !== 'normal' && value !== 'auto') {
-          styleObj[prop] = value;
+    // Extract only spacing-related properties
+    for (const prop of config.cssProperties) {
+      const value = computedStyle.getPropertyValue(prop);
+      if (value && value !== 'none' && value !== 'normal' && value !== 'auto') {
+        styleObj[prop] = value;
 
-          // Extract spacing values
-          if (prop.includes('margin') || prop.includes('padding') || prop.includes('gap')) {
-            // Handle multiple values (e.g., "10px 20px")
-            const values = value.split(' ');
-            values.forEach(val => {
-              if (val.endsWith('px') || val.endsWith('rem') || val.endsWith('em') || val.endsWith('%')) {
-                spacingValues.add(val);
-              }
-            });
-          }
+        // Extract spacing values
+        if (prop.includes('margin') || prop.includes('padding') || prop.includes('gap')) {
+          // Handle multiple values (e.g., "10px 20px")
+          const values = value.split(' ');
+          values.forEach(val => {
+            if (val.endsWith('px') || val.endsWith('rem') || val.endsWith('em') || val.endsWith('%')) {
+              spacingValues.add(val);
+            }
+          });
         }
       }
-
-      return Object.keys(styleObj).length > 0 ? styleObj : null;
     }
 
-    // Process each element
-    for (const selector of config.elements) {
-      let elements;
-      try {
-        elements = document.querySelectorAll(selector);
-      } catch (e) {
-        // Skip invalid selectors
-        continue;
-      }
+    return Object.keys(styleObj).length > 0 ? styleObj : null;
+  }
 
-      if (elements.length > 0) {
-        styles[selector] = [];
-
-        // Process each element matching the selector
-        elements.forEach(element => {
-          const styleObj = getComputedStyleForElement(element, selector);
-          if (styleObj) {
-            // Get element info
-            const id = element.id || null;
-            const classes = Array.from(element.classList).join(' ');
-
-            // Add to styles
-            styles[selector].push({
-              id,
-              classes,
-              styles: styleObj
-            });
-          }
-        });
-      }
-    }
-
-    // Extract CSS variables related to spacing
+  // Process each element
+  for (const selector of config.elements) {
+    let elements;
     try {
-      for (let i = 0; i < document.styleSheets.length; i++) {
-        try {
-          const sheet = document.styleSheets[i];
-          const rules = sheet.cssRules || sheet.rules;
+      elements = document.querySelectorAll(selector);
+    } catch (e) {
+      // Skip invalid selectors
+      continue;
+    }
 
-          for (let j = 0; j < rules.length; j++) {
-            const rule = rules[j];
-            if (rule.style) {
-              for (let k = 0; k < rule.style.length; k++) {
-                const prop = rule.style[k];
-                if (prop.startsWith('--') &&
-                    (prop.includes('spacing') || prop.includes('margin') ||
-                     prop.includes('padding') || prop.includes('gap') ||
-                     prop.includes('width') || prop.includes('height'))) {
-                  const value = rule.style.getPropertyValue(prop);
-                  cssVars[prop] = value;
-                }
+    if (elements.length > 0) {
+      styles[selector] = [];
+
+      // Process each element matching the selector
+      elements.forEach(element => {
+        const styleObj = getComputedStyleForElement(element, selector);
+        if (styleObj) {
+          // Get element info
+          const id = element.id || null;
+          const classes = Array.from(element.classList).join(' ');
+
+          // Add to styles
+          styles[selector].push({
+            id,
+            classes,
+            styles: styleObj
+          });
+        }
+      });
+    }
+  }
+
+  // Extract CSS variables related to spacing
+  try {
+    for (let i = 0; i < document.styleSheets.length; i++) {
+      try {
+        const sheet = document.styleSheets[i];
+        const rules = sheet.cssRules || sheet.rules;
+
+        for (let j = 0; j < rules.length; j++) {
+          const rule = rules[j];
+          if (rule.style) {
+            for (let k = 0; k < rule.style.length; k++) {
+              const prop = rule.style[k];
+              if (prop.startsWith('--') &&
+                  (prop.includes('spacing') || prop.includes('margin') ||
+                   prop.includes('padding') || prop.includes('gap') ||
+                   prop.includes('width') || prop.includes('height'))) {
+                const value = rule.style.getPropertyValue(prop);
+                cssVars[prop] = value;
               }
             }
           }
-        } catch (e) {
-          // Skip inaccessible stylesheets (e.g., from different origins)
-          continue;
         }
+      } catch (e) {
+        // Skip inaccessible stylesheets (e.g., from different origins)
+        continue;
       }
-    } catch (e) {
-      // Ignore errors when accessing stylesheets
     }
+  } catch (e) {
+    // Ignore errors when accessing stylesheets
+  }
 
-    return {
-      elementStyles: styles,
-      spacingValues: Array.from(spacingValues),
-      cssVars
-    };
+  return {
+    elementStyles: styles,
+    spacingValues: Array.from(spacingValues),
+    cssVars
   };
 }
 
@@ -180,8 +210,8 @@ function createSpacingEvaluationFunction(config) {
  */
 async function extractSpacing(page, config = defaultConfig) {
   try {
-    const evaluationFn = createSpacingEvaluationFunction(config);
-    return await page.evaluate(evaluationFn);
+    // Pass the config to the evaluate function
+    return await page.evaluate(evaluateSpacing, config);
   } catch (error) {
     console.error(`Error extracting spacing: ${error.message}`);
     return {
@@ -200,26 +230,93 @@ async function extractSpacing(page, config = defaultConfig) {
  * @returns {Promise<Object>} - Spacing data
  */
 async function extractSpacingFromPage(page, url = null, config = defaultConfig) {
+  // Initialize telemetry if enabled
+  let telemetry = null;
+  if (config.telemetry && config.telemetry.enabled) {
+    telemetry = telemetryManager.initTelemetry(config.telemetry);
+  }
+
   try {
     if (url) {
+      // Record navigation in telemetry if enabled
+      let navigationTimerId;
+      if (telemetry) {
+        navigationTimerId = telemetry.startTimer('navigation', { url });
+      }
+
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+      // Stop navigation timer if started
+      if (telemetry && navigationTimerId) {
+        telemetry.stopTimer(navigationTimerId);
+      }
     }
 
     // Extract spacing
-    const spacing = await extractSpacing(page, config);
+    try {
+      // Record extraction in telemetry if enabled
+      let extractionTimerId;
+      if (telemetry) {
+        extractionTimerId = telemetry.startTimer('extract-spacing', { url });
+      }
 
-    return {
-      success: true,
-      data: spacing
-    };
+      const spacing = await extractSpacing(page, config);
+
+      // Stop extraction timer if started
+      if (telemetry && extractionTimerId) {
+        telemetry.stopTimer(extractionTimerId, {
+          spacingValuesCount: spacing.spacingValues.length,
+          cssVarsCount: Object.keys(spacing.cssVars).length
+        });
+      }
+
+      return {
+        success: true,
+        data: spacing,
+        telemetry: telemetry ? telemetry.getMetrics() : null
+      };
+    } catch (evalError) {
+      console.error(`Error extracting spacing from page: ${evalError.message}`);
+
+      // Record error in telemetry if enabled
+      if (telemetry) {
+        telemetry.recordMetric('extraction-error', 0, {
+          url,
+          error: evalError.message,
+          type: evalError.name
+        });
+      }
+
+      return {
+        success: false,
+        error: {
+          message: evalError.message,
+          type: evalError.name,
+          stack: evalError.stack
+        },
+        telemetry: telemetry ? telemetry.getMetrics() : null
+      };
+    }
   } catch (error) {
+    console.error(`Error navigating to page: ${error.message}`);
+
+    // Record error in telemetry if enabled
+    if (telemetry) {
+      telemetry.recordMetric('navigation-error', 0, {
+        url,
+        error: error.message,
+        type: error.name
+      });
+    }
+
     return {
       success: false,
       error: {
         message: error.message,
         type: error.name,
         stack: error.stack
-      }
+      },
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   }
 }
@@ -310,14 +407,26 @@ async function generateSpacingVisualization(page, groupedSpacing, screenshotsDir
  * @param {Object} logger - Logger object (optional)
  * @returns {Promise<Object>} - Spacing results
  */
-async function extractSpacingFromCrawledPages(customConfig = {}, browser = null, logger = console) {
+async function extractSpacingFromCrawledPages(customConfig = {}, browser = null, logger = null) {
+  // If logger is not provided, get a configured logger from config
+  if (!logger) {
+    const { getLogger } = await import('../utils/console-manager.js');
+    logger = getLogger(customConfig, 'spacing');
+  }
+  // Variable to track if we should close the browser
+  let shouldCloseBrowser = false;
   // Merge configurations
   const config = { ...defaultConfig, ...customConfig };
 
-  logger.log('Starting spacing extraction...');
+  // Initialize telemetry if enabled
+  let telemetry = null;
+  if (config.telemetry && config.telemetry.enabled) {
+    telemetry = telemetryManager.initTelemetry(config.telemetry);
+    logger.log('Telemetry collection enabled');
+  }
 
-  // Variable to track if we should close the browser
-  let shouldCloseBrowser = false;
+  // Create a task with spinner for the overall extraction process
+  const extractionTask = logger.task('Starting spacing extraction');
 
   try {
     // Create screenshots directory if needed and enabled
@@ -325,9 +434,11 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
       fs.mkdirSync(config.screenshotsDir, { recursive: true });
     }
 
-    // Read crawl results
+    // Read crawl results with a spinner
+    const readingSpinner = logger.spinner('Reading crawl results');
+    
     if (!fs.existsSync(config.inputFile)) {
-      logger.error(`Input file not found: ${config.inputFile}`);
+      readingSpinner.fail(`Input file not found: ${config.inputFile}`);
       return {
         success: false,
         error: {
@@ -339,20 +450,45 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
 
     const crawlResults = JSON.parse(fs.readFileSync(config.inputFile, 'utf8'));
     const pages = crawlResults.crawledPages.filter(page => page.status === 200);
+    readingSpinner.succeed(`Found ${pages.length} pages to analyze`);
 
     // Limit the number of pages if needed
     const pagesToAnalyze = config.maxPages === -1 ? pages : pages.slice(0, config.maxPages);
 
-    logger.log(`Analyzing spacing on ${pagesToAnalyze.length} pages...`);
+    // Update the main task with page count
+    extractionTask.update(`Analyzing spacing on ${pagesToAnalyze.length} pages...`);
 
     // Use provided browser or create a new one
     shouldCloseBrowser = !browser;
+
+    // Record browser creation in telemetry if enabled
+    let browserTimerId;
+    if (telemetry && !browser) {
+      browserTimerId = telemetry.startTimer('browser-launch', {});
+    }
+
     browser = browser || await chromium.launch();
+
+    // Stop browser timer if started
+    if (telemetry && browserTimerId) {
+      telemetry.stopTimer(browserTimerId);
+    }
+
+    // Record context creation in telemetry if enabled
+    let contextTimerId;
+    if (telemetry) {
+      contextTimerId = telemetry.startTimer('context-creation', {});
+    }
 
     const context = await browser.newContext({
       ignoreHTTPSErrors: true,
       viewport: { width: 1920, height: 1080 }
     });
+
+    // Stop context timer if started
+    if (telemetry && contextTimerId) {
+      telemetry.stopTimer(contextTimerId);
+    }
 
     // Create a new page
     const page = await context.newPage();
@@ -372,8 +508,20 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
       logger.log(`Analyzing page ${i + 1}/${pagesToAnalyze.length}: ${pageInfo.url}`);
 
       try {
-        // Extract spacing from page
-        const { success, data, error } = await extractSpacingFromPage(page, pageInfo.url, config);
+        // Extract spacing from page with telemetry if enabled
+        let result;
+        if (telemetry) {
+          result = await telemetryManager.withTelemetry(
+            () => extractSpacingFromPage(page, pageInfo.url, config),
+            'extract-spacing-page',
+            { url: pageInfo.url, index: i },
+            telemetry
+          );
+        } else {
+          result = await extractSpacingFromPage(page, pageInfo.url, config);
+        }
+
+        const { success, data, error } = result;
 
         if (!success) {
           logger.error(`Error analyzing ${pageInfo.url}: ${error.message}`);
@@ -423,32 +571,116 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
 
     // Generate spacing visualization if enabled
     if (config.generateVisualizations) {
-      await generateSpacingVisualization(page, groupedSpacing, config.screenshotsDir);
+      // Create visualization spinner
+      const vizSpinner = logger.spinner('Generating spacing visualization');
+      
+      try {
+        // Record visualization generation in telemetry if enabled
+        if (telemetry) {
+          await telemetryManager.withTelemetry(
+            () => generateSpacingVisualization(page, groupedSpacing, config.screenshotsDir),
+            'generate-spacing-visualization',
+            { unitCount: Object.keys(groupedSpacing).length },
+            telemetry
+          );
+        } else {
+          await generateSpacingVisualization(page, groupedSpacing, config.screenshotsDir);
+        }
+        
+        vizSpinner.succeed('Spacing visualization generated');
+      } catch (error) {
+        vizSpinner.warn(`Could not generate spacing visualization: ${error.message}`);
+
+        // Record error in telemetry if enabled
+        if (telemetry) {
+          telemetry.recordMetric('visualization-error', 0, {
+            error: error.message,
+            type: error.name
+          });
+        }
+      }
     }
 
     // Save results to file if enabled
     if (config.writeToFile) {
-      fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
-      logger.log(`Results saved to: ${config.outputFile}`);
+      // Create save file spinner
+      const saveSpinner = logger.spinner(`Saving spacing results to file`);
+      
+      try {
+        // Record file writing in telemetry if enabled
+        if (telemetry) {
+          await telemetryManager.withTelemetry(
+            () => {
+              fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
+              return true;
+            },
+            'write-results-file',
+            { outputFile: config.outputFile },
+            telemetry
+          );
+        } else {
+          fs.writeFileSync(config.outputFile, JSON.stringify(results, null, 2));
+        }
+
+        saveSpinner.succeed(`Results saved to: ${config.outputFile}`);
+      } catch (error) {
+        saveSpinner.fail(`Failed to save results: ${error.message}`);
+      }
     }
 
-    logger.log('\nSpacing extraction completed!');
-    logger.log(`Pages analyzed: ${results.pagesAnalyzed.length}`);
-    logger.log(`Unique spacing values found: ${results.allSpacingValues.length}`);
+    // Generate telemetry report if enabled
+    if (telemetry) {
+      try {
+        const report = telemetry.generateReport('spacing-extraction', {
+          writeToFile: true
+        });
+        logger.log(`Telemetry report generated with ${report.summary.operationCount} operations`);
+      } catch (error) {
+        logger.error(`Error generating telemetry report: ${error.message}`);
+      }
+    }
+
+    // Complete the extraction task with success
+    extractionTask.complete('Spacing extraction completed successfully');
+    
+    // Show summary of results
+    logger.success(`Pages analyzed: ${results.pagesAnalyzed.length}`);
+    logger.info(`Unique spacing values found: ${results.allSpacingValues.length}`);
 
     return {
       success: true,
-      data: results
+      data: results,
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   } catch (error) {
-    logger.error(`Spacing extraction failed: ${error.message}`);
+    // Mark the extraction task as failed
+    extractionTask.fail(`Spacing extraction failed: ${error.message}`);
+
+    // Record error in telemetry if enabled
+    if (telemetry) {
+      telemetry.recordMetric('extraction-process-error', 0, {
+        error: error.message,
+        type: error.name
+      });
+
+      // Generate error telemetry report if enabled
+      try {
+        telemetry.generateReport('spacing-extraction-error', {
+          writeToFile: true
+        });
+      } catch (reportError) {
+        logger.error(`Error generating telemetry report: ${reportError.message}`);
+      }
+    }
+
     return {
       success: false,
       error: {
         message: error.message,
         type: error.name,
         stack: error.stack
-      }
+      },
+      telemetry: telemetry ? telemetry.getMetrics() : null
     };
   } finally {
     // Only close the browser if we created it
@@ -458,23 +690,27 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
   }
 }
 
-// If this script is run directly, execute the extraction
-if (require.main === module) {
-  extractSpacingFromCrawledPages().then(result => {
-    if (!result.success) {
-      console.error('Spacing extraction failed:', result.error.message);
-      process.exit(1);
-    }
-  }).catch(error => {
-    console.error('Spacing extraction failed:', error);
-    process.exit(1);
-  });
+async function run() {
+  if (import.meta.url === new URL(import.meta.url).href) {
+    extractSpacingFromCrawledPages().then(result => {
+      if (!result.success) {
+        console.error('Spacing extraction failed:', result.error.message);
+        process.exitCode = 1;
+      }
+    }).catch(error => {
+      console.error('Spacing extraction failed:', error);
+      process.exitCode = 1;
+    });
+  }
 }
 
-// Export the functions for use in other scripts
-module.exports = {
-  extractSpacingFromCrawledPages,
-  extractSpacingFromPage,
+// Main export function for the spacing extractor
+export default extractSpacingFromCrawledPages;
+
+// For named exports
+export {
   extractSpacing,
-  defaultConfig
+  extractSpacingFromPage,
+  extractSpacingFromCrawledPages,
+  generateSpacingVisualization
 };

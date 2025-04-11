@@ -7,16 +7,17 @@
  * 3. Deletes .crawl-cache.json
  */
 
-const fs = require('fs');
-const path = require('path');
-const readline = require('readline');
+import fs from 'fs';
+import path from 'path';
+import readline from 'readline';
 
 // Default configuration
 const DEFAULT_CONFIG = {
-  "baseUrl": "https://example.com",
-  "maxPages": 50,
+  "baseUrl": null, // Force user to provide a valid URL
+  "outputDir": "./results",
+  "maxPages": 20,
   "timeout": 30000,
-  "screenshotsEnabled": false,
+  "screenshotsEnabled": true,
   "ignoreExtensions": [
     ".pdf",
     ".jpg",
@@ -38,7 +39,16 @@ const DEFAULT_CONFIG = {
     "/checkout/",
     "/search/"
   ],
-  "respectRobotsTxt": true
+  "respectRobotsTxt": true,
+  "telemetry": {
+    "enabled": true,
+    "outputDir": "./results/telemetry",
+    "logToConsole": true,
+    "writeToFile": true,
+    "minDuration": 5,
+    "includeTimestamps": true,
+    "includeMemoryUsage": true
+  }
 };
 
 // Create readline interface for user input
@@ -74,60 +84,106 @@ function deleteDirectory(dirPath) {
  * Reset config.json to default values
  */
 function resetConfig() {
-  fs.writeFileSync('config.json', JSON.stringify(DEFAULT_CONFIG, null, 2));
+  // Path to the config folder and files
+  const configFolder = path.join(process.cwd(), 'config');
+  const configFile = path.join(configFolder, 'config.json');
+  const pathsFile = path.join(configFolder, 'paths.json');
+  
+  // Create the config folder if it doesn't exist
+  if (!fs.existsSync(configFolder)) {
+    fs.mkdirSync(configFolder, { recursive: true });
+    console.log('✅ Created config folder');
+  }
+  
+  // Write the default config
+  fs.writeFileSync(configFile, JSON.stringify(DEFAULT_CONFIG, null, 2));
   console.log('✅ Configuration reset to default values');
-}
-
-/**
- * Delete cache file
- */
-function deleteCache() {
-  const cachePath = path.join(process.cwd(), '.crawl-cache.json');
-  if (fs.existsSync(cachePath)) {
-    fs.unlinkSync(cachePath);
-    console.log('✅ Cache file deleted');
-  } else {
-    console.log('ℹ️ No cache file found');
+  
+  // Delete paths.json if it exists
+  if (fs.existsSync(pathsFile)) {
+    fs.unlinkSync(pathsFile);
+    console.log('✅ Deleted paths.json');
   }
 }
 
 /**
- * Main nuke function
+ * Delete cache files
  */
-function nuke() {
+function deleteCache() {
+  const cacheFiles = [
+    '.crawl-cache.json',
+    '.extractor-cache.json',
+    '.token-cache.json'
+  ];
+  
+  let deletedCount = 0;
+  
+  cacheFiles.forEach(cacheFile => {
+    const cachePath = path.join(process.cwd(), cacheFile);
+    if (fs.existsSync(cachePath)) {
+      fs.unlinkSync(cachePath);
+      console.log(`✅ Cache file deleted: ${cacheFile}`);
+      deletedCount++;
+    }
+  });
+  
+  if (deletedCount === 0) {
+    console.log('ℹ️ No cache files found');
+  } else {
+    console.log(`✅ ${deletedCount} cache files deleted`);
+  }
+}
+
+/**
+ * Perform the actual nuke operation
+ */
+function performNuke() {
+  console.log('\nExecuting nuke process...');
+
+  // 1. Delete results folder
+  const resultsPath = path.join(process.cwd(), 'results');
+  try {
+    deleteDirectory(resultsPath);
+    console.log('✅ Results folder deleted');
+  } catch (error) {
+    console.error(`❌ Error deleting results folder: ${error.message}`);
+  }
+
+  // 2. Reset config
+  try {
+    resetConfig();
+  } catch (error) {
+    console.error(`❌ Error resetting configuration: ${error.message}`);
+  }
+
+  // 3. Delete cache
+  try {
+    deleteCache();
+  } catch (error) {
+    console.error(`❌ Error deleting cache: ${error.message}`);
+  }
+
+  console.log('\n🧹 Nuke process completed successfully!');
+  console.log('The crawler environment has been reset to its default state.');
+  console.log('You can now start fresh with a new crawl.');
+}
+
+/**
+ * Main nuke function
+ * @param {boolean} [force=false] - Whether to force nuke without confirmation
+ */
+function nuke(force = false) {
   console.log('🧨 NUKE PROCESS STARTED 🧨');
   console.log('This will delete all results, reset configuration, and clear the cache.');
 
+  if (force) {
+    performNuke();
+    return;
+  }
+
   rl.question('Are you sure you want to proceed? (y/n): ', (answer) => {
     if (answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
-      console.log('\nExecuting nuke process...');
-
-      // 1. Delete results folder
-      const resultsPath = path.join(process.cwd(), 'results');
-      try {
-        deleteDirectory(resultsPath);
-        console.log('✅ Results folder deleted');
-      } catch (error) {
-        console.error(`❌ Error deleting results folder: ${error.message}`);
-      }
-
-      // 2. Reset config
-      try {
-        resetConfig();
-      } catch (error) {
-        console.error(`❌ Error resetting configuration: ${error.message}`);
-      }
-
-      // 3. Delete cache
-      try {
-        deleteCache();
-      } catch (error) {
-        console.error(`❌ Error deleting cache: ${error.message}`);
-      }
-
-      console.log('\n🧹 Nuke process completed successfully!');
-      console.log('The crawler environment has been reset to its default state.');
-      console.log('You can now start fresh with a new crawl.');
+      performNuke();
     } else {
       console.log('Nuke process cancelled.');
     }
@@ -137,9 +193,18 @@ function nuke() {
 }
 
 // Run the nuke function if this script is executed directly
-if (require.main === module) {
+if (import.meta.url === new URL(import.meta.url).href) {
   nuke();
 }
 
-// Export the nuke function for use in other scripts
-module.exports = { nuke };
+// Export default as an object containing all functions
+export default {
+  nuke,
+  deleteDirectory,
+  resetConfig,
+  deleteCache,
+  performNuke
+};
+
+// Export functions for direct import
+export { nuke, deleteDirectory, resetConfig, deleteCache, performNuke };

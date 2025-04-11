@@ -275,6 +275,8 @@ describe('Spacing Extractor', () => {
 
       // Verify
       expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(mockPage.evaluate.mock.calls[0][0]).toBe(extractSpacing.evaluateSpacing);
+      expect(mockPage.evaluate.mock.calls[0][1]).toBeDefined(); // Config is passed
       expect(result).toHaveProperty('elementStyles');
       expect(result).toHaveProperty('spacingValues');
       expect(result).toHaveProperty('cssVars');

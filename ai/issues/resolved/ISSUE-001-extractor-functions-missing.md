@@ -2,7 +2,7 @@
 id: ISSUE-001
 title: Missing Extractor Functions for Single Page Analysis
 created: 2023-07-10
-status: open
+status: resolved
 severity: medium
 category: code-organization
 related_components: extractors

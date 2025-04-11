@@ -26,5 +26,28 @@
     "/search/"
   ],
   "respectRobotsTxt": true,
-  "twigDebugMode": false
+  "twigDebugMode": false,
+  "FilteredComponentList": [
+    "button",
+    "card",
+    "modal",
+    "navigation",
+    "banner"
+  ],
+  "telemetry": {
+    "enabled": true,
+    "outputDir": "./results/telemetry",
+    "logToConsole": true,
+    "writeToFile": true,
+    "minDuration": 5,
+    "includeTimestamps": true,
+    "includeMemoryUsage": true
+  },
+  "logging": {
+    "debug": true,
+    "logLevel": "INFO",
+    "colors": true,
+    "timestamps": true,
+    "prefix": "crawler"
+  }
 }

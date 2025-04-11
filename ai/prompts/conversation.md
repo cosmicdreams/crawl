@@ -138,3 +138,138 @@ While continuing writing tests for extractors:
 1. Fix any bugs you find along the way.  For example the functions that don't appear to be used / misnamed.
 2. Make sure the tests pass, fix the tests until they do.
 3. Each time you are done with this phase, create any issues into ai/issues/open that you need.  this will help us both remember the problems that are found along the way.
+
+---- 
+# Code quality tools
+I think it might be good to have some kind of tool that can scan the code tha find common code errors / syntax violations.  I think that's called a linter.  Can you add a linter or whatever tool does this.  Do we need a test that shows the linting succeeds without generating errors.
+
+---- 
+# Found a bug part 1
+I found this bug:
+
+Generating component library...
+Error: TypeError: Cannot read properties of undefined (reading '0')
+at /Users/Chris.Weber/Tools/crawl/src/extractors/extract-components.js:445:73
+at Array.forEach (<anonymous>)
+at /Users/Chris.Weber/Tools/crawl/src/extractors/extract-components.js:400:16
+at Array.forEach (<anonymous>)
+at Object.generateComponentLibrary (/Users/Chris.Weber/Tools/crawl/src/extractors/extract-components.js:392:13)
+at crawl (/Users/Chris.Weber/Tools/crawl/src/crawler/site-crawler.js:555:49)
+at async run (/Users/Chris.Weber/Tools/crawl/run.js:1006:20)
+
+Create an appropriate issue for it.
+-----
+# Unit Tests part 5
+Let's turn our attention to generators.
+1. Write the tests first
+2. Make sure the tests pass
+3. Fix the tests when the test is at fault
+4. Fix the code when it is at fault.
+5. Remember to create issues as before whenever there are problems that take too long to fix.
+
+Also remember that we're using this exercise to find ways of organizing the code that may be better.
+
+-----
+
+# Fixing Bugs Part 1
+Take a quick moment to attempt to this the bugs we've gathered in /Users/Chris.Weber/Tools/crawl/ai/issues/open
+
+For each:
+1. Assess the severity and add a severity level to the issue.
+2. If the issue is critical or high try to fix it.  Bug it seems to be taking a long time to fix, continue onto the next issue.
+3. If any issues appear to need tests, create a new issue about what tests need to be written.
+4. If any issues are fixed, "complete the issue".  Which means move the issue to the resolved folder.
+
+-----
+
+# Extractor tests / new approach to test plan / test writing
+I notice that there still appears to be more tests needed for extractors.  Think of the plan for creating these test and produce one issue per test you have yet to write.
+Then read the files you have made and think about how to improve / add more detail about those tests and improve the issue.
+Then try to build out the tests according to the issues.
+
+# Response:
+You asked me
+
+Would you like me to:
+Create these issues in a specific format? Yes, see the /Users/Chris.Weber/Tools/crawl/ai/issues/issue.template.md we use.
+Start implementing one of these test files? Not yet. let's loop over the test plan first.
+Suggest refactoring ideas to make the extractors more testable?  That's next.  Let's get more detail as we think about the test plan.
+
+# Context saving
+
+Since this is the second context frame we're working in, I think it's time to extract your understanding of this app into a Context.
+
+Do this first:
+1. Read through and understand all the code in src
+2. Understand the reports and results the code will produce (in results)
+3. Understand the tools used to make the app and the way it's used.
+
+Output your understanding of the app into a /Users/Chris.Weber/Tools/crawl/ai/docs/context.md file. 
+
+Write it with the audience of a AI bot that will use this file to load it's context window with everything it needs in order to understand what we're doing here.
+
+# Fix showstopper bug
+I think we should prioritize fixing /Users/Chris.Weber/Tools/crawl/ai/issues/open/ISSUE-004-component-library-generation-error.md
+This bug prevents the app from running fully.  So I think it's a high priority.
+
+Your recent work may have fixed this bug.  I think we should check to see if it's still an issue.  If the problem persists, fix it.
+
+Do you need to improve upon the error report before getting started.  Do you have any questions?
+
+# Implement Suggestions
+You've written out some good ideas in /Users/Chris.Weber/Tools/crawl/ai/docs/extractor-refactoring-suggestions.md
+Implement all of those.  
+
+Make sure all the tests continue to pass.
+
+# Annoying bug
+I am very annoyed with /Users/Chris.Weber/Tools/crawl/ai/issues/open/ISSUE-006-incorrect-file-path-checks.md.  It seems like a simple fix. 
+
+Can you see to resolving this bug next?  Do you have any questions about it?
+
+# Clean up
+OK, now we have files like /Users/Chris.Weber/Tools/crawl/src/extractors/extract-animations.js AND /Users/Chris.Weber/Tools/crawl/src/extractors/extract-animations-refactored.js in the extractors folder.  
+Meaning, we have the original approach and a complete refactored, additional approach.  We should keep only one solution.  Let's keep the refactored approach.
+
+rename each -refactored file to remove the "-refactored" part of the name.  We also should keep the tests for the refactored files.  
+
+Then make sure tests still pass.
+
+Do you see any problems with this change?
+
+# Unit Tests for Generators
+OK, we've spent a ton of time on extractors.  Let's get started with writing tests for generators.  Like before do:
+
+1. Read through the generators code.
+2. Create issues for each test you think needs to be written.
+3. review the issue you just created and think about how to improve it.
+4. Implement the tests.
+5. As each test is complete, complete the issue.
+6. Begin again with the next test.
+
+# Found a bug
+I think I found an error with the spacing, border and animation extractors.  It reads:
+Analyzing page 1/20: https://pncb.ddev.site/
+Error extracting spacing: page.evaluate: ReferenceError: config is not defined
+at evaluateSpacing (eval at evaluate (:234:30), <anonymous>:34:35)
+at UtilityScript.evaluate (<anonymous>:236:17)
+at UtilityScript.<anonymous> (<anonymous>:1:44)
+
+Analyzing page 1/20: https://pncb.ddev.site/
+Error extracting borders: page.evaluate: ReferenceError: config is not defined
+at evaluateBorders (eval at evaluate (:234:30), <anonymous>:52:35)
+at UtilityScript.evaluate (<anonymous>:236:17)
+at UtilityScript.<anonymous> (<anonymous>:1:44)
+
+Analyzing page 1/20: https://pncb.ddev.site/
+Error extracting animations: page.evaluate: ReferenceError: config is not defined
+at evaluateAnimations (eval at evaluate (:234:30), <anonymous>:53:35)
+at UtilityScript.evaluate (<anonymous>:236:17)
+at UtilityScript.<anonymous> (<anonymous>:1:44)
+
+-----
+
+# Check issues
+I'm pretty sure you completed some of the issues in /Users/Chris.Weber/Tools/crawl/ai/issues/open. Can you check these issue files and see if any have been completed.  If so move them to resolved.
+
+If not, determine which issue has the highest priority and report back to me.

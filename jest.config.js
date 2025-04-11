@@ -5,7 +5,7 @@
  * including code coverage reporting and test matching patterns.
  */
 
-module.exports = {
+export default {
   // Test environment
   testEnvironment: 'node',
   
@@ -56,12 +56,20 @@ module.exports = {
   // Indicates whether each individual test should be reported during the run
   verbose: true,
   
-  // A map from regular expressions to paths to transformers
+  // Enable ESM support
+  extensionsToTreatAsEsm: ['.js'],
+  
+  // A map from regular expressions to transformers
   transform: {},
   
   // An array of regexp patterns that are matched against all source file paths before re-running tests in watch mode
   watchPathIgnorePatterns: [
     'results',
     'coverage'
-  ]
+  ],
+  
+  // Needed for Jest with ES modules
+  moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1'
+  }
 };

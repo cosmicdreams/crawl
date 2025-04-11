@@ -1,281 +1,178 @@
 // @ts-check
-const { chromium } = require('@playwright/test');
-const fs = require('fs');
-const path = require('path');
-const componentExtractor = require('../extractors/extract-components');
-const configManager = require('../utils/config-manager');
+import { chromium } from '@playwright/test';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { 
+  extractComponents,
+  generateComponentLibrary,
+  saveComponentLibrary,
+  generateComponentReport
+} from '../extractors/extract-components.js';
+import { 
+  readConfig, 
+  getDefaultConfig, 
+  readPaths, 
+  savePaths,
+  DEFAULT_PATHS_PATH,
+  pathsFileExists
+} from '../utils/config-manager.js';
+
+// Get the current file's directory (ES modules don't have __dirname)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+// Create a configurable crawler config object to store the latest config
+// This will be updated when crawlSite runs
+let _crawlConfig = {
+  baseUrl: '',
+  maxPages: 0,
+  timeout: 30000
+};
 
 /**
  * Site crawler using Playwright
  * This script crawls a website starting from a given URL and collects all internal links
  */
 
-// Load configuration
-let fileConfig = configManager.readConfig();
-
-// Default crawler configuration
-const config = {
-  // Base URL of the site to crawl
-  baseUrl: fileConfig.baseUrl,
-
-  // Maximum number of pages to crawl (set to -1 for unlimited)
-  maxPages: fileConfig.maxPages,
-
-  // Timeout for page navigation in milliseconds
-  timeout: fileConfig.timeout,
-
-  // Output file for the crawl results
-  outputFile: path.join(__dirname, '../../results/raw/crawl-results.json'),
-
-  // Whether to save screenshots of each page
-  saveScreenshots: fileConfig.screenshotsEnabled,
-
-  // Directory to save screenshots (if enabled)
-  screenshotDir: path.join(__dirname, '../../results/screenshots'),
-
-  // File extensions to ignore
-  ignoreExtensions: fileConfig.ignoreExtensions,
-
-  // URL patterns to ignore (regex strings)
-  ignorePatterns: fileConfig.ignorePatterns,
-
-  // Paths file for storing and loading paths
-  pathsFile: path.join(__dirname, '../../results/paths.json'),
-
-  // Whether to respect robots.txt
-  respectRobotsTxt: fileConfig.respectRobotsTxt,
-
-  // Component discovery settings
-  components: {
-    // Whether to extract components during crawling
-    enabled: true,
-    // Output file for component data
-    outputFile: path.join(__dirname, '../../results/components.json'),
-    // Output file for component library HTML report
-    reportFile: path.join(__dirname, '../../results/reports/component-library.html'),
-  },
-};
-
-// Create screenshot directory if it doesn't exist and screenshots are enabled
-if (config.saveScreenshots) {
-  if (!fs.existsSync(config.screenshotDir)) {
-    fs.mkdirSync(config.screenshotDir, { recursive: true });
-  }
-}
+/**
+ * @typedef {Object} CrawledPage
+ * @property {string} url
+ * @property {string} title
+ * @property {number} status
+ * @property {string} contentType
+ * @property {string} timestamp
+ * @property {string|null} screenshotPath
+ * @property {string[]} bodyClasses
+ */
 
 /**
- * Advanced path deduplication
- * @param {string[]} paths - Array of paths to deduplicate
- * @returns {string[]} - Deduplicated paths
+ * @typedef {Object} CrawlError
+ * @property {string} url
+ * @property {string} error
+ * @property {string} timestamp
  */
-function deduplicatePaths(paths) {
-  // Step 1: Group paths by their structure (pattern)
-  const patternGroups = {};
-
-  paths.forEach(path => {
-    // Skip the root path
-    if (path === '/') return;
-
-    // Split path into segments
-    const segments = path.split('/').filter(s => s.length > 0);
-
-    // Create a pattern by replacing likely IDs with placeholders
-    const pattern = segments.map(segment => {
-      // Check if segment is numeric
-      if (/^\d+$/.test(segment)) {
-        return '{id}';
-      }
-
-      // Check if segment ends with a numeric ID (common pattern like 'product-123')
-      if (/^[a-z0-9-]+-\d+$/.test(segment)) {
-        return segment.replace(/-\d+$/, '-{id}');
-      }
-
-      // Check if segment is a UUID
-      if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(segment)) {
-        return '{uuid}';
-      }
-
-      return segment;
-    }).join('/');
-
-    // Add to pattern group
-    if (!patternGroups[pattern]) {
-      patternGroups[pattern] = [];
-    }
-    patternGroups[pattern].push(path);
-  });
-
-  // Step 2: Select representative paths from each pattern group
-  const dedupedPaths = ['/'];  // Always include root path
-
-  Object.entries(patternGroups).forEach(([pattern, pathsInPattern]) => {
-    // If there's only one path in this pattern, include it
-    if (pathsInPattern.length === 1) {
-      dedupedPaths.push(pathsInPattern[0]);
-      return;
-    }
-
-    // For patterns with multiple paths, select representatives
-    // Sort by length (shortest first) and then alphabetically
-    pathsInPattern.sort((a, b) => {
-      if (a.length !== b.length) return a.length - b.length;
-      return a.localeCompare(b);
-    });
-
-    // Always include the first path (shortest/alphabetically first)
-    dedupedPaths.push(pathsInPattern[0]);
-
-    // If there are many paths in this pattern (more than 5), include a few more examples
-    if (pathsInPattern.length > 5) {
-      // Add one from the middle and one from the end for diversity
-      const middleIndex = Math.floor(pathsInPattern.length / 2);
-      dedupedPaths.push(pathsInPattern[middleIndex]);
-      dedupedPaths.push(pathsInPattern[pathsInPattern.length - 1]);
-    }
-  });
-
-  // Step 3: Remove paths that are too similar based on edit distance
-  const finalPaths = [];
-
-  dedupedPaths.forEach(path => {
-    // Always include the root path
-    if (path === '/') {
-      finalPaths.push(path);
-      return;
-    }
-
-    // Check if this path is too similar to any path we've already included
-    const isTooSimilar = finalPaths.some(existingPath => {
-      // Skip comparison with root
-      if (existingPath === '/') return false;
-
-      // If paths have different segment counts, they're not too similar
-      const pathSegments = path.split('/').filter(s => s.length > 0);
-      const existingSegments = existingPath.split('/').filter(s => s.length > 0);
-
-      if (pathSegments.length !== existingSegments.length) return false;
-
-      // If first segment is different, they're not too similar
-      if (pathSegments[0] !== existingSegments[0]) return false;
-
-      // Count differences between segments
-      let differences = 0;
-      for (let i = 0; i < pathSegments.length; i++) {
-        if (pathSegments[i] !== existingSegments[i]) differences++;
-      }
-
-      // If more than half the segments are different, they're not too similar
-      return differences <= Math.floor(pathSegments.length / 2);
-    });
-
-    if (!isTooSimilar) {
-      finalPaths.push(path);
-    }
-  });
-
-  return finalPaths;
-}
 
 /**
- * Normalize URL by removing trailing slashes and query parameters if needed
- * @param {string} url - URL to normalize
- * @returns {string} - Normalized URL
+ * @typedef {Object} ComponentData
+ * @property {string} url
+ * @property {string} path
+ * @property {string} title
+ * @property {string[]} bodyClasses
+ * @property {any[]} components
  */
-function normalizeUrl(url) {
-  // Remove trailing slash
-  url = url.endsWith('/') ? url.slice(0, -1) : url;
-
-  // Remove query parameters if needed
-  // Uncomment the next line if you want to ignore query parameters
-  // url = url.split('?')[0];
-
-  return url;
-}
 
 /**
- * Check if URL should be crawled based on configuration
- * @param {string} url - URL to check
- * @param {string} baseUrl - Base URL of the site
- * @returns {boolean} - Whether the URL should be crawled
+ * @typedef {Object} CrawlResults
+ * @property {string} startTime
+ * @property {string} baseUrl
+ * @property {CrawledPage[]} crawledPages
+ * @property {CrawlError[]} errors
+ * @property {ComponentData[]} components
+ * @property {string} endTime
+ * @property {number} totalPages
+ * @property {number} totalErrors
+ * @property {number} duration
  */
-function shouldCrawl(url, baseUrl) {
+
+/**
+ * Crawl a website starting from a given URL
+ * @param {string} baseUrl - Base URL to start crawling from
+ * @param {number} maxPages - Maximum number of pages to crawl
+ * @param {Object} options - Additional options
+ * @returns {Promise<CrawlResults>} - Crawl results
+ */
+export async function crawlSite(baseUrl, maxPages, options = {}) {
+  console.log('=========================================================');
+  console.log('CRAWL SITE FUNCTION CALLED WITH:');
+  console.log('baseUrl:', baseUrl);
+  console.log('maxPages:', maxPages);
+  console.log('options:', JSON.stringify(options, null, 2));
+  console.log('DEFAULT_PATHS_PATH is:', DEFAULT_PATHS_PATH);
+  console.log('pathsFileExists function available:', typeof pathsFileExists === 'function');
+  console.log('=========================================================');
+  // Get default configuration as fallback
+  const defaultConfig = getDefaultConfig();
+
+  // Try to load configuration from file, will throw if validation fails (no baseUrl)
+  let fileConfig;
   try {
-    const urlObj = new URL(url);
-
-    // Check if URL is from the same domain
-    if (!url.startsWith(baseUrl)) {
-      return false;
-    }
-
-    // Check file extensions to ignore
-    for (const ext of config.ignoreExtensions) {
-      if (urlObj.pathname.endsWith(ext)) {
-        return false;
-      }
-    }
-
-    // Check patterns to ignore
-    for (const pattern of config.ignorePatterns) {
-      const regex = new RegExp(pattern);
-      if (regex.test(urlObj.pathname)) {
-        return false;
-      }
-    }
-
-    return true;
+    fileConfig = readConfig();
   } catch (error) {
-    console.error(`Error parsing URL ${url}:`, error.message);
-    return false;
+    console.error(`Fatal error: ${error.message}`);
+    throw new Error(`Configuration validation failed: ${error.message}`);
   }
-}
 
-/**
- * Extract links from a page
- * @param {import('playwright').Page} page - Playwright page object
- * @returns {Promise<string[]>} - Array of links
- */
-async function extractLinks(page) {
-  return page.evaluate(() => {
-    const links = Array.from(document.querySelectorAll('a[href]'));
-    return links
-      .map(link => link.href)
-      .filter(href => href && href.trim() !== '' && !href.startsWith('javascript:') && !href.startsWith('mailto:') && !href.startsWith('tel:'));
-  });
-}
+  console.log('site-crawler.js - Creating crawler configuration with:');
+  console.log('- options.baseUrl:', options.baseUrl);
+  console.log('- baseUrl parameter:', baseUrl);
+  console.log('- fileConfig.baseUrl:', fileConfig.baseUrl);
+  console.log('- defaultConfig.baseUrl:', defaultConfig.baseUrl);
+  
+  // Default crawler configuration
+  const config = {
+    // Base URL of the site to crawl (command line takes precedence)
+    baseUrl: options.baseUrl || baseUrl || fileConfig.baseUrl || defaultConfig.baseUrl,
 
-/**
- * Extract body classes from a page
- * @param {import('playwright').Page} page - Playwright page object
- * @returns {Promise<string[]>} - Array of body classes
- */
-async function extractBodyClasses(page) {
-  return page.evaluate(() => {
-    const bodyElement = document.querySelector('body');
-    if (bodyElement && bodyElement.className) {
-      return bodyElement.className.split(/\s+/).filter(Boolean);
-    }
-    return [];
-  });
-}
+    // Maximum number of pages to crawl (command line takes precedence)
+    maxPages: options.maxPages || maxPages || fileConfig.maxPages || defaultConfig.maxPages,
 
-/**
- * Main crawl function
- * @param {string} [baseUrl] - Base URL to crawl (overrides config)
- * @param {number} [maxPages] - Maximum pages to crawl (overrides config)
- * @param {Object} [options] - Additional options
- * @returns {Promise<Object>} - Crawl results
- */
-async function crawl(baseUrl, maxPages, options = {}) {
-  // Override config with parameters if provided
-  const crawlConfig = { ...config };
-  if (baseUrl) crawlConfig.baseUrl = baseUrl;
-  if (maxPages) crawlConfig.maxPages = maxPages;
-  if (options.timeout) crawlConfig.timeout = options.timeout;
-  if (options.outputFile) crawlConfig.outputFile = options.outputFile;
+    // Timeout for page navigation in milliseconds
+    timeout: fileConfig.timeout || defaultConfig.timeout,
 
-  console.log(`Starting crawl of ${crawlConfig.baseUrl}`);
-  console.log(`Max pages: ${crawlConfig.maxPages === -1 ? 'Unlimited' : crawlConfig.maxPages}`);
+    // Output file for the crawl results
+    outputFile: path.join(process.cwd(), 'results/raw/crawl-results.json'),
+
+    // Whether to save screenshots of each page
+    saveScreenshots: fileConfig.screenshotsEnabled || defaultConfig.screenshotsEnabled,
+
+    // Directory to save screenshots (if enabled)
+    screenshotDir: path.join(process.cwd(), 'results/screenshots'),
+
+    // File extensions to ignore
+    ignoreExtensions: fileConfig.ignoreExtensions || defaultConfig.ignoreExtensions,
+
+    // URL patterns to ignore (regex strings)
+    ignorePatterns: fileConfig.ignorePatterns || defaultConfig.ignorePatterns,
+
+    // Paths file for storing and loading paths
+    pathsFile: DEFAULT_PATHS_PATH,
+
+    // Whether to respect robots.txt
+    respectRobotsTxt: fileConfig.respectRobotsTxt || defaultConfig.respectRobotsTxt,
+
+    // Component discovery settings
+    components: {
+      // Whether to extract components during crawling
+      enabled: true,
+      // Output file for component data
+      outputFile: path.join(process.cwd(), 'config/components.json'),
+      // Output file for component library HTML report
+      reportFile: path.join(process.cwd(), 'results/reports/component-library.html'),
+      // Filtered component list - only extract components matching these machine names
+      FilteredComponentList: fileConfig.FilteredComponentList || [],
+    },
+  };
+
+  // Create the local crawler config for this run
+  const localCrawlConfig = { ...config };
+  
+  // Note: We don't need to reassign baseUrl or maxPages here because
+  // we already established the correct priority in the config object above
+  
+  // Add any additional options not already handled
+  if (options) {
+    // Filter out the options we've already processed
+    const { baseUrl: _, maxPages: __, ...otherOptions } = options;
+    Object.assign(localCrawlConfig, otherOptions);
+  }
+  
+  // Update the internal _crawlConfig so it can be accessed by other modules via getCrawlConfig()
+  _crawlConfig = { ...localCrawlConfig };
+
+  console.log(`Starting crawl of ${localCrawlConfig.baseUrl}`);
+  console.log(`Max pages: ${localCrawlConfig.maxPages === -1 ? 'Unlimited' : localCrawlConfig.maxPages}`);
 
   const browser = await chromium.launch();
   const context = await browser.newContext({
@@ -287,53 +184,269 @@ async function crawl(baseUrl, maxPages, options = {}) {
   const page = await context.newPage();
 
   // Set timeout
-  page.setDefaultTimeout(crawlConfig.timeout);
+  page.setDefaultTimeout(localCrawlConfig.timeout);
 
   // Check if paths file exists and load paths
   let initialPaths = ['/'];
   let usingSavedPaths = false;
 
-  if (fs.existsSync(crawlConfig.pathsFile)) {
-    try {
-      const pathsData = JSON.parse(fs.readFileSync(crawlConfig.pathsFile, 'utf8'));
-      if (pathsData.paths && Array.isArray(pathsData.paths) && pathsData.paths.length > 0) {
-        initialPaths = pathsData.paths;
-        usingSavedPaths = true;
-        console.log(`Loaded ${initialPaths.length} paths from ${crawlConfig.pathsFile}`);
+  // Use the readPaths function from config-manager
+  console.log('Reading paths from:', crawlConfig.pathsFile);
+  const pathsData = readPaths(crawlConfig.pathsFile);
+  
+  console.log('Paths data:', pathsData ? 'Found' : 'Not found');
+  if (pathsData) {
+    console.log('Paths data baseUrl:', pathsData.baseUrl);
+    console.log('Paths count:', pathsData.paths ? pathsData.paths.length : 0);
+  }
+  
+  if (pathsData && pathsData.paths && Array.isArray(pathsData.paths) && pathsData.paths.length > 0) {
+    initialPaths = pathsData.paths;
+    usingSavedPaths = true;
+    console.log(`Loaded ${initialPaths.length} paths from ${crawlConfig.pathsFile}`);
+    
+    // Ensure we're using the correct baseUrl from the paths file
+    if (pathsData.baseUrl) {
+      console.log(`Using baseUrl from paths file: ${pathsData.baseUrl}`);
+      // Only override if not explicitly set in command line options
+      if (!options.baseUrl && !baseUrl) {
+        localCrawlConfig.baseUrl = pathsData.baseUrl;
+        console.log(`Setting crawler baseUrl to: ${localCrawlConfig.baseUrl}`);
       }
-    } catch (error) {
-      console.warn(`Error loading paths from ${crawlConfig.pathsFile}:`, error.message);
-      console.log('Using default path: /');
     }
   } else {
-    console.log(`Paths file not found. Will create ${crawlConfig.pathsFile} after crawling.`);
+    console.log(`No valid paths found. Will create ${localCrawlConfig.pathsFile} after crawling.`);
   }
 
   // Queue of URLs to crawl
-  const queue = initialPaths.map(path => new URL(path, crawlConfig.baseUrl).toString());
+  const queue = initialPaths.map(path => new URL(path, localCrawlConfig.baseUrl).toString());
 
   // Set of visited URLs
   const visited = new Set();
 
   // Results object
+  /** @type {CrawlResults} */
   const results = {
     startTime: new Date().toISOString(),
     baseUrl: crawlConfig.baseUrl,
     crawledPages: [],
     errors: [],
-    components: [] // Array to store component data
+    components: [],
+    endTime: '',
+    totalPages: 0,
+    totalErrors: 0,
+    duration: 0
   };
 
+  // Create screenshot directory if it doesn't exist and screenshots are enabled
+  if (crawlConfig.saveScreenshots) {
+    if (!fs.existsSync(crawlConfig.screenshotDir)) {
+      fs.mkdirSync(crawlConfig.screenshotDir, { recursive: true });
+    }
+  }
+
+  /**
+   * Deduplicate paths by consolidating similar patterns
+   * @param {string[]} paths - Array of paths to deduplicate
+   * @returns {string[]} - Deduplicated paths
+   */
+  function deduplicatePaths(paths) {
+    // Step 1: Group paths by their structure (pattern)
+    const patternGroups = {};
+
+    paths.forEach(path => {
+      // Skip the root path
+      if (path === '/') return;
+
+      // Split path into segments
+      const segments = path.split('/').filter(s => s.length > 0);
+
+      // Create a pattern by replacing likely IDs with placeholders
+      const pattern = segments.map(segment => {
+        // Check if segment is numeric
+        if (/^\d+$/.test(segment)) {
+          return '{id}';
+        }
+
+        // Check if segment ends with a numeric ID (common pattern like 'product-123')
+        if (/^[a-z0-9-]+-\d+$/.test(segment)) {
+          return segment.replace(/-\d+$/, '-{id}');
+        }
+
+        // Check if segment is a UUID
+        if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(segment)) {
+          return '{uuid}';
+        }
+
+        return segment;
+      }).join('/');
+
+      // Add to pattern group
+      if (!patternGroups[pattern]) {
+        patternGroups[pattern] = [];
+      }
+      patternGroups[pattern].push(path);
+    });
+
+    // Step 2: Select representative paths from each pattern group
+    const dedupedPaths = ['/'];  // Always include root path
+
+    Object.entries(patternGroups).forEach(([pattern, pathsInPattern]) => {
+      // If there's only one path in this pattern, include it
+      if (pathsInPattern.length === 1) {
+        dedupedPaths.push(pathsInPattern[0]);
+        return;
+      }
+
+      // For patterns with multiple paths, select representatives
+      // Sort by length (shortest first) and then alphabetically
+      pathsInPattern.sort((a, b) => {
+        if (a.length !== b.length) return a.length - b.length;
+        return a.localeCompare(b);
+      });
+
+      // Always include the first path (shortest/alphabetically first)
+      dedupedPaths.push(pathsInPattern[0]);
+
+      // If there are many paths in this pattern (more than 5), include a few more examples
+      if (pathsInPattern.length > 5) {
+        // Add one from the middle and one from the end for diversity
+        const middleIndex = Math.floor(pathsInPattern.length / 2);
+        dedupedPaths.push(pathsInPattern[middleIndex]);
+        dedupedPaths.push(pathsInPattern[pathsInPattern.length - 1]);
+      }
+    });
+
+    // Step 3: Remove paths that are too similar based on edit distance
+    const finalPaths = [];
+
+    dedupedPaths.forEach(path => {
+      // Always include the root path
+      if (path === '/') {
+        finalPaths.push(path);
+        return;
+      }
+
+      // Check if this path is too similar to any path we've already included
+      const isTooSimilar = finalPaths.some(existingPath => {
+        // Skip comparison with root
+        if (existingPath === '/') return false;
+
+        // If paths have different segment counts, they're not too similar
+        const pathSegments = path.split('/').filter(s => s.length > 0);
+        const existingSegments = existingPath.split('/').filter(s => s.length > 0);
+
+        if (pathSegments.length !== existingSegments.length) return false;
+
+        // If first segment is different, they're not too similar
+        if (pathSegments[0] !== existingSegments[0]) return false;
+
+        // Count differences between segments
+        let differences = 0;
+        for (let i = 0; i < pathSegments.length; i++) {
+          if (pathSegments[i] !== existingSegments[i]) differences++;
+        }
+
+        // If more than half the segments are different, they're not too similar
+        return differences <= Math.floor(pathSegments.length / 2);
+      });
+
+      if (!isTooSimilar) {
+        finalPaths.push(path);
+      }
+    });
+
+    return finalPaths;
+  }
+
+  /**
+   * Normalize a URL by removing trailing slash and query parameters
+   * @param {string} url - URL to normalize
+   * @returns {string} - Normalized URL
+   */
+  function normalizeUrl(url) {
+    // Remove trailing slash
+    url = url.endsWith('/') ? url.slice(0, -1) : url;
+
+    // Remove query parameters if needed
+    // Uncomment the next line if you want to ignore query parameters
+    // url = url.split('?')[0];
+
+    return url;
+  }
+
+  /**
+   * Check if a URL should be crawled
+   * @param {string} url - URL to check
+   * @param {string} baseUrl - Base URL of the site
+   * @returns {boolean} - Whether the URL should be crawled
+   */
+  function shouldCrawl(url, baseUrl) {
+    try {
+      const urlObj = new URL(url, baseUrl);
+
+      // Check if URL is from the same domain
+      if (!url.startsWith(baseUrl)) {
+        return false;
+      }
+
+      // Check file extensions to ignore
+      for (const ext of localCrawlConfig.ignoreExtensions) {
+        if (urlObj.pathname.endsWith(ext)) {
+          return false;
+        }
+      }
+
+      // Check patterns to ignore
+      for (const pattern of localCrawlConfig.ignorePatterns) {
+        const regex = new RegExp(pattern);
+        if (regex.test(urlObj.pathname)) {
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Error parsing URL ${baseUrl + url}:`, error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Extract links from a page
+   * @param {import('@playwright/test').Page} page - Playwright page object
+   * @returns {Promise<string[]>} - Array of links
+   */
+  async function extractLinks(page) {
+    return page.evaluate(() => {
+      const links = Array.from(document.querySelectorAll('a[href]'));
+      return links.map(link => link.getAttribute('href') || '');
+    });
+  }
+
+  /**
+   * Extract all body classes from a page
+   * @param {import('@playwright/test').Page} page - Playwright page object
+   * @returns {Promise<string[]>} - Array of body classes
+   */
+  async function extractBodyClasses(page) {
+    return page.evaluate(() => {
+      const bodyElement = document.querySelector('body');
+      return bodyElement ? Array.from(bodyElement.classList) : [];
+    });
+  }
+
   // Crawl until queue is empty or max pages reached
-  while (queue.length > 0 && (crawlConfig.maxPages === -1 || visited.size < crawlConfig.maxPages)) {
+  while (queue.length > 0 && (localCrawlConfig.maxPages === -1 || visited.size < localCrawlConfig.maxPages)) {
     const url = queue.shift();
+    if (!url) continue;
 
     // Skip if already visited
     if (visited.has(url)) {
       continue;
     }
 
-    console.log(`Crawling (${visited.size + 1}/${crawlConfig.maxPages === -1 ? '∞' : crawlConfig.maxPages}): ${url}`);
+    console.log(`Crawling (${visited.size + 1}/${localCrawlConfig.maxPages === -1 ? '∞' : localCrawlConfig.maxPages}): ${url}`);
 
     try {
       // Navigate to the page
@@ -363,9 +476,9 @@ async function crawl(baseUrl, maxPages, options = {}) {
 
       // Save screenshot if enabled
       let screenshotPath = null;
-      if (crawlConfig.saveScreenshots) {
+      if (localCrawlConfig.saveScreenshots) {
         const urlSafe = url.replace(/[^a-z0-9]/gi, '_').substring(0, 100);
-        screenshotPath = path.join(crawlConfig.screenshotDir, `${urlSafe}.png`);
+        screenshotPath = path.join(localCrawlConfig.screenshotDir, `${urlSafe}.png`);
         await page.screenshot({ path: screenshotPath, fullPage: true });
       }
 
@@ -394,10 +507,10 @@ async function crawl(baseUrl, maxPages, options = {}) {
       const links = await extractLinks(page);
 
       // Extract components if enabled
-      if (crawlConfig.components && crawlConfig.components.enabled) {
+      if (localCrawlConfig.components && localCrawlConfig.components.enabled) {
         try {
           console.log(`Extracting components from ${url}...`);
-          const components = await componentExtractor.extractComponents(page, crawlConfig);
+          const components = await extractComponents(page, localCrawlConfig);
           console.log(`Found ${components.length} components on ${url}`);
 
           // Add to results
@@ -416,7 +529,7 @@ async function crawl(baseUrl, maxPages, options = {}) {
       // Add new links to queue
       for (const link of links) {
         const normalizedLink = normalizeUrl(link);
-        if (shouldCrawl(normalizedLink, crawlConfig.baseUrl) && !visited.has(normalizedLink) && !queue.includes(normalizedLink)) {
+        if (shouldCrawl(normalizedLink, localCrawlConfig.baseUrl) && !visited.has(normalizedLink) && !queue.includes(normalizedLink)) {
           queue.push(normalizedLink);
         }
       }
@@ -439,21 +552,23 @@ async function crawl(baseUrl, maxPages, options = {}) {
   results.endTime = new Date().toISOString();
   results.totalPages = results.crawledPages.length;
   results.totalErrors = results.errors.length;
-  results.duration = (new Date(results.endTime) - new Date(results.startTime)) / 1000; // in seconds
+  const startTime = new Date(results.startTime).getTime();
+  const endTime = new Date(results.endTime).getTime();
+  results.duration = (endTime - startTime) / 1000; // in seconds
 
   // Ensure output directory exists
-  const outputDir = path.dirname(crawlConfig.outputFile);
+  const outputDir = path.dirname(localCrawlConfig.outputFile);
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
 
   // Save results to file
-  fs.writeFileSync(crawlConfig.outputFile, JSON.stringify(results, null, 2));
+  fs.writeFileSync(localCrawlConfig.outputFile, JSON.stringify(results, null, 2));
 
   // Save discovered paths if not using saved paths
   if (!usingSavedPaths) {
     // Extract paths from crawled pages
-    const baseUrlObj = new URL(crawlConfig.baseUrl);
+    const baseUrlObj = new URL(localCrawlConfig.baseUrl);
     let discoveredPaths = results.crawledPages
       .filter(page => page.status === 200) // Only include successful pages
       .map(page => {
@@ -524,60 +639,71 @@ async function crawl(baseUrl, maxPages, options = {}) {
 
     // Save paths to file
     const pathsData = {
-      baseUrl: crawlConfig.baseUrl,
+      baseUrl: localCrawlConfig.baseUrl,
       paths: organizedPaths,
       generatedAt: new Date().toISOString(),
       groups: groupedPaths,
       comment: "This file contains paths discovered during crawling. You can review and modify this file before continuing with the extraction process. Remove any paths you don't want to include, and add any paths that might have been missed. Paths should be relative to the base URL and start with a forward slash (/)."
     };
 
-    // Ensure directory exists for paths file
-    const pathsDir = path.dirname(crawlConfig.pathsFile);
-    if (!fs.existsSync(pathsDir)) {
-      fs.mkdirSync(pathsDir, { recursive: true });
-    }
-
-    fs.writeFileSync(crawlConfig.pathsFile, JSON.stringify(pathsData, null, 2));
-    console.log(`\nSaved ${organizedPaths.length} unique, organized paths to ${crawlConfig.pathsFile}`);
+    // Save paths using our config manager
+    savePaths(pathsData, localCrawlConfig.pathsFile);
+    console.log(`\nSaved ${organizedPaths.length} unique, organized paths to ${localCrawlConfig.pathsFile}`);
   }
 
   console.log('\nCrawl completed!');
   console.log(`Total pages crawled: ${results.totalPages}`);
   console.log(`Total errors: ${results.totalErrors}`);
   console.log(`Duration: ${results.duration} seconds`);
-  console.log(`Results saved to: ${crawlConfig.outputFile}`);
+  console.log(`Results saved to: ${localCrawlConfig.outputFile}`);
 
   // Generate component library if enabled and components were found
-  if (crawlConfig.components && crawlConfig.components.enabled && results.components.length > 0) {
+  if (localCrawlConfig.components && localCrawlConfig.components.enabled && results.components.length > 0) {
     console.log('\nGenerating component library...');
 
     // Generate component library
-    const componentLibrary = componentExtractor.generateComponentLibrary(results.components);
+    const componentLibrary = generateComponentLibrary(results.components);
 
     // Save component library to JSON file
-    componentExtractor.saveComponentLibrary(componentLibrary, crawlConfig.components.outputFile);
+    saveComponentLibrary(componentLibrary, localCrawlConfig.components.outputFile);
 
     // Generate HTML report
-    componentExtractor.generateComponentReport(componentLibrary, crawlConfig.components.reportFile);
+    generateComponentReport(componentLibrary, localCrawlConfig.components.reportFile);
 
-    console.log(`Component library saved to: ${crawlConfig.components.outputFile}`);
-    console.log(`Component report saved to: ${crawlConfig.components.reportFile}`);
+    console.log(`Component library saved to: ${localCrawlConfig.components.outputFile}`);
+    console.log(`Component report saved to: ${localCrawlConfig.components.reportFile}`);
   }
 
   // Close browser
   await browser.close();
+
+  // Add debugging for final baseUrl
+  console.log('=========================================================');
+  console.log('CRAWL COMPLETED WITH baseUrl:', localCrawlConfig.baseUrl);
+  console.log('=========================================================');
 
   // Return the results
   return results;
 }
 
 // Run the crawler if this script is run directly
-if (require.main === module) {
-  crawl().catch(error => {
+if (import.meta.url === `file://${process.argv[1]}`) {
+  const config = readConfig();
+  crawlSite(config.baseUrl, config.maxPages).catch(error => {
     console.error('Crawl failed:', error);
-    process.exit(1);
+    process.exitCode = 1;
   });
 }
 
-// Export the function for use in other scripts
-module.exports = { crawlSite: crawl };
+// Create a configurable crawler config that will be updated when crawlSite runs
+// Using let instead of const allows the crawlConfig to be updated when crawlSite is called
+export let crawlConfig = {
+  baseUrl: '',
+  maxPages: 0,
+  timeout: 30000
+};
+
+// Export default as an object containing all functions and the config
+export default {
+  crawlSite
+};

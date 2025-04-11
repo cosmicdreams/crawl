@@ -1,13 +1,16 @@
 // @ts-check
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const readline = require('readline');
+import fs from 'fs';
+import path from 'path';
+import crypto from 'crypto';
+import readline from 'readline';
+import { fileURLToPath } from 'url';
 
 /**
  * Cache manager for the crawl process
  * Handles caching, change detection, and interactive user prompts
  */
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Cache file path
 const CACHE_FILE = path.join(__dirname, '../../.crawl-cache.json');
@@ -135,14 +138,17 @@ function updateCacheForStep(step, config) {
       }
     }
   } else if (['typography', 'colors', 'spacing', 'borders', 'animations'].includes(step)) {
-    const analysisFile = path.join(__dirname, `../results/raw/${step}-analysis.json`);
+    const analysisFile = path.join(__dirname, `../../results/raw/${step}-analysis.json`);
     cache.fileStats[`${step}-analysis.json`] = getFileStats(analysisFile);
+    cache.inputHashes[`${step}-analysis.json`] = calculateFileHash(analysisFile);
   } else if (step === 'tokens') {
-    const tokensFile = path.join(__dirname, '../results/tokens/tokens.json');
+    const tokensFile = path.join(__dirname, '../../results/tokens/tokens.json');
     cache.fileStats['tokens.json'] = getFileStats(tokensFile);
+    cache.inputHashes['tokens.json'] = calculateFileHash(tokensFile);
   } else if (step === 'reports') {
-    const reportFile = path.join(__dirname, '../results/reports/design-system-report.html');
+    const reportFile = path.join(__dirname, '../../results/reports/design-system-report.html');
     cache.fileStats['design-system-report.html'] = getFileStats(reportFile);
+    cache.inputHashes['design-system-report.html'] = calculateFileHash(reportFile);
   }
 
   saveCacheData(cache);
@@ -167,7 +173,7 @@ function checkIfStepNeedsRun(step, config) {
 
   // Check based on step
   if (step === 'crawl') {
-    const pathsFile = path.join(__dirname, '../../results/paths.json');
+    const pathsFile = path.join(__dirname, '../../config/paths.json');
 
     // If paths.json doesn't exist, need to run
     if (!fs.existsSync(pathsFile)) {
@@ -216,7 +222,7 @@ function checkIfStepNeedsRun(step, config) {
     }
 
     // If crawl results don't exist, need to run
-    const crawlResultsFile = path.join(__dirname, '../results/raw/crawl-results.json');
+    const crawlResultsFile = path.join(__dirname, '../../results/raw/crawl-results.json');
     if (!fs.existsSync(crawlResultsFile)) {
       return {
         needsRun: true,
@@ -231,7 +237,7 @@ function checkIfStepNeedsRun(step, config) {
     };
   } else if (['typography', 'colors', 'spacing', 'borders', 'animations'].includes(step)) {
     // If crawl results don't exist, need to run crawl first
-    const crawlResultsFile = path.join(__dirname, '../results/raw/crawl-results.json');
+    const crawlResultsFile = path.join(__dirname, '../../results/raw/crawl-results.json');
     if (!fs.existsSync(crawlResultsFile)) {
       return {
         needsRun: true,
@@ -251,7 +257,7 @@ function checkIfStepNeedsRun(step, config) {
     }
 
     // If analysis file doesn't exist, need to run
-    const analysisFile = path.join(__dirname, `../results/raw/${step}-analysis.json`);
+    const analysisFile = path.join(__dirname, `../../results/raw/${step}-analysis.json`);
     if (!fs.existsSync(analysisFile)) {
       return {
         needsRun: true,
@@ -259,15 +265,14 @@ function checkIfStepNeedsRun(step, config) {
       };
     }
 
-    // Check if analysis file has been manually modified
-    const currentStats = getFileStats(analysisFile);
-    const cachedStats = cache.fileStats[`${step}-analysis.json`];
-
-    if (cachedStats && currentStats &&
-        new Date(currentStats.mtime) > new Date(analysisTimestamp)) {
+    // Check if analysis file has been modified using hash comparison
+    const currentHash = calculateFileHash(analysisFile);
+    const cachedHash = cache.inputHashes[`${step}-analysis.json`];
+    
+    if (cachedHash && currentHash !== cachedHash) {
       return {
         needsRun: true,
-        reason: `${step} analysis file has been manually modified`
+        reason: `${step} analysis file has been modified (content changed)`
       };
     }
 
@@ -292,7 +297,7 @@ function checkIfStepNeedsRun(step, config) {
     }
 
     // If tokens file doesn't exist, need to run
-    const tokensFile = path.join(__dirname, '../results/tokens/tokens.json');
+    const tokensFile = path.join(__dirname, '../../results/tokens/tokens.json');
     if (!fs.existsSync(tokensFile)) {
       return {
         needsRun: true,
@@ -300,6 +305,17 @@ function checkIfStepNeedsRun(step, config) {
       };
     }
 
+    // Check if tokens file has been modified using hash comparison
+    const currentHash = calculateFileHash(tokensFile);
+    const cachedHash = cache.inputHashes['tokens.json'];
+    
+    if (cachedHash && currentHash !== cachedHash) {
+      return {
+        needsRun: true,
+        reason: 'Tokens file has been modified (content changed)'
+      };
+    }
+    
     // Otherwise, don't need to run
     return {
       needsRun: false,
@@ -318,7 +334,7 @@ function checkIfStepNeedsRun(step, config) {
     }
 
     // If report file doesn't exist, need to run
-    const reportFile = path.join(__dirname, '../results/reports/design-system-report.html');
+    const reportFile = path.join(__dirname, '../../results/reports/design-system-report.html');
     if (!fs.existsSync(reportFile)) {
       return {
         needsRun: true,
@@ -326,6 +342,17 @@ function checkIfStepNeedsRun(step, config) {
       };
     }
 
+    // Check if report file has been modified using hash comparison
+    const currentHash = calculateFileHash(reportFile);
+    const cachedHash = cache.inputHashes['design-system-report.html'];
+    
+    if (cachedHash && currentHash !== cachedHash) {
+      return {
+        needsRun: true,
+        reason: 'Report file has been modified (content changed)'
+      };
+    }
+    
     // Otherwise, don't need to run
     return {
       needsRun: false,
@@ -424,7 +451,7 @@ async function promptUser(stepAnalysis, config) {
         break;
     }
 
-    console.log(`${index + 1}. [${stepName}] ${description}`);
+    console.log(`* [${stepName}] ${description}`);
   });
 
   // Create readline interface
@@ -519,14 +546,14 @@ async function promptUser(stepAnalysis, config) {
   }
 }
 
-module.exports = {
+// Export all functions as default export
+export default {
+  calculateFileHash,
+  getFileStats,
   getCacheData,
   saveCacheData,
   updateCacheForStep,
   checkIfStepNeedsRun,
   analyzeStepsToRun,
-  promptUser,
-  calculateFileHash,
-  getFileStats,
-  CACHE_FILE
+  promptUser
 };

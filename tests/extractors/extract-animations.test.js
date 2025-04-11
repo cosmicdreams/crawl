@@ -354,6 +354,8 @@ describe('Animations Extractor', () => {
 
       // Verify
       expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(mockPage.evaluate.mock.calls[0][0]).toBe(extractAnimations.evaluateAnimations);
+      expect(mockPage.evaluate.mock.calls[0][1]).toBeDefined(); // Config is passed
       expect(result).toHaveProperty('elementStyles');
       expect(result).toHaveProperty('durations');
       expect(result).toHaveProperty('timingFunctions');

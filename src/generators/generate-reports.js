@@ -1,6 +1,16 @@
 // @ts-check
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import  { crawlConfig} from "../crawler/site-crawler.js"
+import  { defaultConfig as typographyConfig} from "../extractors/extract-typography.js"
+import  { defaultConfig as colorsConfig} from "../extractors/extract-colors.js"
+import  { defaultConfig as spacingConfig} from "../extractors/extract-spacing.js"
+import  { defaultConfig as bordersConfig} from "../extractors/extract-borders.js"
+import  { defaultConfig as animationsConfig} from "../extractors/extract-animations.js"
+
 
 /**
  * Generate HTML reports for the design system
@@ -10,12 +20,12 @@ const path = require('path');
 const config = {
   // Input files
   inputFiles: {
-    crawlResults: path.join(__dirname, '../../results/raw/crawl-results.json'),
-    typography: path.join(__dirname, '../../results/raw/typography-analysis.json'),
-    colors: path.join(__dirname, '../../results/raw/color-analysis.json'),
-    spacing: path.join(__dirname, '../../results/raw/spacing-analysis.json'),
-    borders: path.join(__dirname, '../../results/raw/borders-analysis.json'),
-    animations: path.join(__dirname, '../../results/raw/animations-analysis.json')
+    crawlResults: crawlConfig.outputFile,
+    typography: typographyConfig.outputFile,
+    colors: colorsConfig.outputFile,
+    spacing: spacingConfig.outputFile,
+    borders: bordersConfig.outputFile,
+    animations: animationsConfig.outputFile,
   },
 
   // Output files
@@ -712,12 +722,16 @@ async function generateReports() {
 }
 
 // If this script is run directly, execute the report generation
-if (require.main === module) {
+if (import.meta.url === new URL(import.meta.url).href) {
   generateReports().catch(error => {
     console.error('Report generation failed:', error);
-    process.exit(1);
+    process.exitCode = 1;
   });
 }
 
-// Export the function for use in other scripts
-module.exports = { generateReports };
+// Export default as an object containing all functions
+export default {
+  generateCrawlReport,
+  generateDesignSystemReport,
+  generateReports
+};

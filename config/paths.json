@@ -1,0 +1,87 @@
+{
+  "baseUrl": "https://pncb.ddev.site",
+  "paths": [
+    "/",
+    "/certifications",
+    "/certifications/certified-pediatric-nurse",
+    "/compare-rn-certifications",
+    "/cpn-certification-benefits",
+    "/cpn-certification-steps",
+    "/cpn-corner",
+    "/cpn-exam-faqs",
+    "/cpn-exam-resources",
+    "/cpn-recert-faqs",
+    "/cpn-recertification",
+    "/cpn-role",
+    "/cpnp-pc",
+    "/cpnp-pc-certification-steps",
+    "/cpnp-pc-exam-eligibility",
+    "/cpnp-pc-role",
+    "/market-your-cpn-credential",
+    "/news/take-cpn-exam-home",
+    "/recognition-ideas",
+    "/your-cpn-exam-appointment"
+  ],
+  "generatedAt": "2025-04-11T15:33:32.645Z",
+  "groups": {
+    "root": [
+      "/"
+    ],
+    "certifications": [
+      "/certifications",
+      "/certifications/certified-pediatric-nurse"
+    ],
+    "compare-rn-certifications": [
+      "/compare-rn-certifications"
+    ],
+    "cpn-certification-benefits": [
+      "/cpn-certification-benefits"
+    ],
+    "cpn-certification-steps": [
+      "/cpn-certification-steps"
+    ],
+    "cpn-corner": [
+      "/cpn-corner"
+    ],
+    "cpn-exam-faqs": [
+      "/cpn-exam-faqs"
+    ],
+    "cpn-exam-resources": [
+      "/cpn-exam-resources"
+    ],
+    "cpn-recert-faqs": [
+      "/cpn-recert-faqs"
+    ],
+    "cpn-recertification": [
+      "/cpn-recertification"
+    ],
+    "cpn-role": [
+      "/cpn-role"
+    ],
+    "cpnp-pc": [
+      "/cpnp-pc"
+    ],
+    "cpnp-pc-certification-steps": [
+      "/cpnp-pc-certification-steps"
+    ],
+    "cpnp-pc-exam-eligibility": [
+      "/cpnp-pc-exam-eligibility"
+    ],
+    "cpnp-pc-role": [
+      "/cpnp-pc-role"
+    ],
+    "market-your-cpn-credential": [
+      "/market-your-cpn-credential"
+    ],
+    "recognition-ideas": [
+      "/recognition-ideas"
+    ],
+    "your-cpn-exam-appointment": [
+      "/your-cpn-exam-appointment"
+    ],
+    "news": [
+      "/news/take-cpn-exam-home"
+    ]
+  },
+  "comment": "This file contains paths discovered during crawling. You can review and modify this file before continuing with the extraction process. Remove any paths you don't want to include, and add any paths that might have been missed. Paths should be relative to the base URL and start with a forward slash (/)."
+}

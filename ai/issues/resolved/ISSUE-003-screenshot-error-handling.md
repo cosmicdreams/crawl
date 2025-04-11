@@ -2,7 +2,7 @@
 id: ISSUE-003
 title: Inadequate Error Handling for Screenshot Generation
 created: 2023-07-10
-status: open
+status: resolved
 severity: medium
 category: error-handling
 related_components: extractors
