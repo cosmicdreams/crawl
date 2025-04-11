@@ -55,10 +55,10 @@ const defaultConfig = {
 
   // Screenshots directory
   screenshotsDir: path.join(__dirname, '../../results/screenshots/spacing'),
-
+  
   // Whether to write results to file
   writeToFile: true,
-
+  
   // Whether to generate visualizations
   generateVisualizations: true
 };
@@ -204,10 +204,10 @@ async function extractSpacingFromPage(page, url = null, config = defaultConfig) 
     if (url) {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
     }
-
+    
     // Extract spacing
     const spacing = await extractSpacing(page, config);
-
+    
     return {
       success: true,
       data: spacing
@@ -244,8 +244,8 @@ async function generateSpacingVisualization(page, groupedSpacing, screenshotsDir
         h1 { margin-bottom: 20px; }
         .spacing-group { margin-bottom: 40px; }
         .spacing-group h2 { margin-bottom: 10px; }
-        .spacing-item {
-          display: flex;
+        .spacing-item { 
+          display: flex; 
           align-items: center;
           margin-bottom: 10px;
         }
@@ -313,11 +313,8 @@ async function generateSpacingVisualization(page, groupedSpacing, screenshotsDir
 async function extractSpacingFromCrawledPages(customConfig = {}, browser = null, logger = console) {
   // Merge configurations
   const config = { ...defaultConfig, ...customConfig };
-
+  
   logger.log('Starting spacing extraction...');
-
-  // Variable to track if we should close the browser
-  let shouldCloseBrowser = false;
 
   try {
     // Create screenshots directory if needed and enabled
@@ -346,9 +343,9 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
     logger.log(`Analyzing spacing on ${pagesToAnalyze.length} pages...`);
 
     // Use provided browser or create a new one
-    shouldCloseBrowser = !browser;
+    const shouldCloseBrowser = !browser;
     browser = browser || await chromium.launch();
-
+    
     const context = await browser.newContext({
       ignoreHTTPSErrors: true,
       viewport: { width: 1920, height: 1080 }
@@ -374,12 +371,12 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
       try {
         // Extract spacing from page
         const { success, data, error } = await extractSpacingFromPage(page, pageInfo.url, config);
-
+        
         if (!success) {
           logger.error(`Error analyzing ${pageInfo.url}: ${error.message}`);
           continue;
         }
-
+        
         // Add to results
         results.pagesAnalyzed.push({
           url: pageInfo.url,

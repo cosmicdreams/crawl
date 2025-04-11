@@ -438,6 +438,11 @@ function generateComponentLibrary(pagesData) {
           attributes
         });
       } else {
+        // Before creating a new component, check if instances exist
+        if (!component.instances || component.instances.length === 0) {
+          component.instances = [{ url, html, classes, attributes }];
+        }
+
         // Add new component
         componentsByType[type].push({
           signature,

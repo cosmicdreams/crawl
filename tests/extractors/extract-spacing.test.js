@@ -147,37 +147,31 @@ describe('Spacing Extractor', () => {
         return true;
       });
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
-
       // Execute
-      await extractSpacing.extractSpacingFromCrawledPages();
+      const result = await extractSpacing.extractSpacingFromCrawledPages();
 
       // Verify
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Input file not found'));
-      expect(mockExit).toHaveBeenCalledWith(1);
-
-      // Restore process.exit
-      mockExit.mockRestore();
+      expect(result.success).toBe(false);
+      expect(result.error.message).toContain('Input file not found');
+      expect(result.error.type).toBe('FileNotFoundError');
     });
 
     test('handles browser launch errors', async () => {
       // Setup
       const originalLaunch = chromium.launch;
       chromium.launch = jest.fn().mockRejectedValue(new Error('Browser launch failed'));
-      process.exit = jest.fn(); // Mock process.exit
 
-      try {
-        // Execute and catch the error
-        await expect(extractSpacing.extractSpacingFromCrawledPages()).rejects.toThrow('Browser launch failed');
+      // Execute
+      const result = await extractSpacing.extractSpacingFromCrawledPages();
 
-        // Verify
-        expect(chromium.launch).toHaveBeenCalled();
-        expect(fs.writeFileSync).not.toHaveBeenCalled();
-      } finally {
-        // Restore original function
-        chromium.launch = originalLaunch;
-        process.exit.mockRestore();
-      }
+      // Verify
+      expect(chromium.launch).toHaveBeenCalled();
+      expect(result.success).toBe(false);
+      expect(result.error.message).toBe('Browser launch failed');
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
+
+      // Restore original function
+      chromium.launch = originalLaunch;
     });
 
     test('handles page navigation errors', async () => {
@@ -208,7 +202,8 @@ describe('Spacing Extractor', () => {
       // Verify
       expect(chromium.launch).toHaveBeenCalled();
       expect(mockPage.goto).toHaveBeenCalled();
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Error analyzing'), expect.any(String));
+      expect(console.error).toHaveBeenCalled();
+      expect(console.error.mock.calls[0][0]).toContain('Error analyzing');
       expect(fs.writeFileSync).toHaveBeenCalled(); // Should still write results even with errors
 
       // Check that the result has empty arrays for the failed page
@@ -217,6 +212,90 @@ describe('Spacing Extractor', () => {
       const parsedContent = JSON.parse(writtenContent);
 
       expect(parsedContent.pagesAnalyzed).toHaveLength(0);
+    });
+  });
+
+  describe('extractSpacingFromPage', () => {
+    test('extracts spacing from a page', async () => {
+      // Setup
+      const mockPage = {
+        goto: jest.fn().mockResolvedValue({}),
+        evaluate: jest.fn().mockResolvedValue({
+          elementStyles: {
+            'div': [{ styles: { 'margin': '10px' } }]
+          },
+          spacingValues: ['10px'],
+          cssVars: {}
+        })
+      };
+
+      // Execute
+      const result = await extractSpacing.extractSpacingFromPage(mockPage, 'https://example.com');
+
+      // Verify
+      expect(mockPage.goto).toHaveBeenCalledWith('https://example.com', expect.any(Object));
+      expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveProperty('elementStyles');
+      expect(result.data).toHaveProperty('spacingValues');
+      expect(result.data).toHaveProperty('cssVars');
+    });
+
+    test('handles navigation errors', async () => {
+      // Setup
+      const mockPage = {
+        goto: jest.fn().mockRejectedValue(new Error('Navigation failed'))
+      };
+
+      // Execute
+      const result = await extractSpacing.extractSpacingFromPage(mockPage, 'https://example.com');
+
+      // Verify
+      expect(mockPage.goto).toHaveBeenCalled();
+      expect(result.success).toBe(false);
+      expect(result.error.message).toBe('Navigation failed');
+    });
+  });
+
+  describe('extractSpacing', () => {
+    test('extracts spacing values from a page', async () => {
+      // Setup
+      const mockPage = {
+        evaluate: jest.fn().mockResolvedValue({
+          elementStyles: {
+            'div': [{ styles: { 'margin': '10px' } }]
+          },
+          spacingValues: ['10px'],
+          cssVars: {}
+        })
+      };
+
+      // Execute
+      const result = await extractSpacing.extractSpacing(mockPage);
+
+      // Verify
+      expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(result).toHaveProperty('elementStyles');
+      expect(result).toHaveProperty('spacingValues');
+      expect(result).toHaveProperty('cssVars');
+    });
+
+    test('handles evaluation errors', async () => {
+      // Setup
+      const mockPage = {
+        evaluate: jest.fn().mockRejectedValue(new Error('Evaluation failed'))
+      };
+
+      // Execute
+      const result = await extractSpacing.extractSpacing(mockPage);
+
+      // Verify
+      expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(result).toEqual({
+        elementStyles: {},
+        spacingValues: [],
+        cssVars: {}
+      });
     });
   });
 

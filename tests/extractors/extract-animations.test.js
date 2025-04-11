@@ -161,37 +161,31 @@ describe('Animations Extractor', () => {
         return true;
       });
 
-      const mockExit = jest.spyOn(process, 'exit').mockImplementation(() => {});
-
       // Execute
-      await extractAnimations.extractAnimationsFromCrawledPages();
+      const result = await extractAnimations.extractAnimationsFromCrawledPages();
 
       // Verify
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Input file not found'));
-      expect(mockExit).toHaveBeenCalledWith(1);
-
-      // Restore process.exit
-      mockExit.mockRestore();
+      expect(result.success).toBe(false);
+      expect(result.error.message).toContain('Input file not found');
+      expect(result.error.type).toBe('FileNotFoundError');
     });
 
     test('handles browser launch errors', async () => {
       // Setup
       const originalLaunch = chromium.launch;
       chromium.launch = jest.fn().mockRejectedValue(new Error('Browser launch failed'));
-      process.exit = jest.fn(); // Mock process.exit
 
-      try {
-        // Execute and catch the error
-        await expect(extractAnimations.extractAnimationsFromCrawledPages()).rejects.toThrow('Browser launch failed');
+      // Execute
+      const result = await extractAnimations.extractAnimationsFromCrawledPages();
 
-        // Verify
-        expect(chromium.launch).toHaveBeenCalled();
-        expect(fs.writeFileSync).not.toHaveBeenCalled();
-      } finally {
-        // Restore original function
-        chromium.launch = originalLaunch;
-        process.exit.mockRestore();
-      }
+      // Verify
+      expect(chromium.launch).toHaveBeenCalled();
+      expect(result.success).toBe(false);
+      expect(result.error.message).toBe('Browser launch failed');
+      expect(fs.writeFileSync).not.toHaveBeenCalled();
+
+      // Restore original function
+      chromium.launch = originalLaunch;
     });
 
     test('handles page navigation errors', async () => {
@@ -222,7 +216,8 @@ describe('Animations Extractor', () => {
       // Verify
       expect(chromium.launch).toHaveBeenCalled();
       expect(mockPage.goto).toHaveBeenCalled();
-      expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Error analyzing'), expect.any(String));
+      expect(console.error).toHaveBeenCalled();
+      expect(console.error.mock.calls[0][0]).toContain('Error analyzing');
       expect(fs.writeFileSync).toHaveBeenCalled(); // Should still write results even with errors
 
       // Check that the result has empty arrays for the failed page
@@ -287,6 +282,105 @@ describe('Animations Extractor', () => {
       expect(parsedContent.keyframes.fadeIn).toHaveProperty('0%');
       expect(parsedContent.keyframes.fadeIn).toHaveProperty('100%');
       expect(parsedContent.keyframes.fadeIn['0%']).toHaveProperty('opacity', '0');
+    });
+  });
+
+  describe('extractAnimationsFromPage', () => {
+    test('extracts animations from a page', async () => {
+      // Setup
+      const mockPage = {
+        goto: jest.fn().mockResolvedValue({}),
+        evaluate: jest.fn().mockResolvedValue({
+          elementStyles: {
+            'div': [{ styles: { 'animation': 'fadeIn 1s ease-in-out' } }]
+          },
+          durations: ['1s'],
+          timingFunctions: ['ease-in-out'],
+          delays: ['0s'],
+          keyframes: {},
+          cssVars: {}
+        })
+      };
+
+      // Execute
+      const result = await extractAnimations.extractAnimationsFromPage(mockPage, 'https://example.com');
+
+      // Verify
+      expect(mockPage.goto).toHaveBeenCalledWith('https://example.com', expect.any(Object));
+      expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(result.success).toBe(true);
+      expect(result.data).toHaveProperty('elementStyles');
+      expect(result.data).toHaveProperty('durations');
+      expect(result.data).toHaveProperty('timingFunctions');
+      expect(result.data).toHaveProperty('delays');
+      expect(result.data).toHaveProperty('keyframes');
+      expect(result.data).toHaveProperty('cssVars');
+    });
+
+    test('handles navigation errors', async () => {
+      // Setup
+      const mockPage = {
+        goto: jest.fn().mockRejectedValue(new Error('Navigation failed'))
+      };
+
+      // Execute
+      const result = await extractAnimations.extractAnimationsFromPage(mockPage, 'https://example.com');
+
+      // Verify
+      expect(mockPage.goto).toHaveBeenCalled();
+      expect(result.success).toBe(false);
+      expect(result.error.message).toBe('Navigation failed');
+    });
+  });
+
+  describe('extractAnimations', () => {
+    test('extracts animation values from a page', async () => {
+      // Setup
+      const mockPage = {
+        evaluate: jest.fn().mockResolvedValue({
+          elementStyles: {
+            'div': [{ styles: { 'animation': 'fadeIn 1s ease-in-out' } }]
+          },
+          durations: ['1s'],
+          timingFunctions: ['ease-in-out'],
+          delays: ['0s'],
+          keyframes: {},
+          cssVars: {}
+        })
+      };
+
+      // Execute
+      const result = await extractAnimations.extractAnimations(mockPage);
+
+      // Verify
+      expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(result).toHaveProperty('elementStyles');
+      expect(result).toHaveProperty('durations');
+      expect(result).toHaveProperty('timingFunctions');
+      expect(result).toHaveProperty('delays');
+      expect(result).toHaveProperty('keyframes');
+      expect(result).toHaveProperty('cssVars');
+    });
+
+    test('handles evaluation errors', async () => {
+      // Setup
+      const mockPage = {
+        evaluate: jest.fn().mockRejectedValue(new Error('Evaluation failed'))
+      };
+
+      // Execute
+      const result = await extractAnimations.extractAnimations(mockPage);
+
+      // Verify
+      expect(mockPage.evaluate).toHaveBeenCalled();
+      expect(result).toEqual({
+        elementStyles: {},
+        durations: [],
+        timingFunctions: [],
+        delays: [],
+        keyframes: {},
+        cssVars: {}
+      });
     });
   });
 
