@@ -273,3 +273,8 @@ at UtilityScript.<anonymous> (<anonymous>:1:44)
 I'm pretty sure you completed some of the issues in /Users/Chris.Weber/Tools/crawl/ai/issues/open. Can you check these issue files and see if any have been completed.  If so move them to resolved.
 
 If not, determine which issue has the highest priority and report back to me.
+
+-------
+# Linter fix.
+
+I don't know why my linter stopped working can you fix?

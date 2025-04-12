@@ -295,7 +295,7 @@ class ConsoleManager {
       // If we have an active spinner, use stopAndPersist in debug mode to preserve output
       if (this.activeSpinner && this.options.debug) {
         this.activeSpinner.stopAndPersist({
-          symbol: this.options.colors ? colorFn(symbol) : symbol,
+          symbol: this.options.colors && typeof colorFn === 'function' ? colorFn(symbol) : symbol,
           text: formattedMessage,
         });
 

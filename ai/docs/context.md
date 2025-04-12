@@ -18,6 +18,8 @@ The primary purpose is to automatically extract and document design systems from
 - Create a standardized design token system
 - Generate documentation for designers and developers
 
+## 
+
 ## Project Structure
 
 The project is organized into several key directories:
