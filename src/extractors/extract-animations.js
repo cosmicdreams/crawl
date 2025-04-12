@@ -1,9 +1,10 @@
-// @ts-check
-import { chromium } from '@playwright/test';
+
 import fs from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+
+import { chromium } from '@playwright/test';
+
 import telemetryManager from '../utils/telemetry-manager.js';
 
 /**
@@ -91,8 +92,8 @@ export const defaultConfig = {
 /**
  * Function to evaluate animations on a page
  * This function is serialized and executed in the browser context
- * @param {Object} config - Configuration object passed from Node.js
- * @returns {Object} - Extracted animation data
+ * @param {object} config - Configuration object passed from Node.js
+ * @returns {object} - Extracted animation data
  */
 function evaluateAnimations(config) {
     const styles = {};
@@ -243,8 +244,8 @@ function evaluateAnimations(config) {
 /**
  * Extract animation styles from a page
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Animation styles
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Animation styles
  */
 async function extractAnimations(page, config = defaultConfig) {
   try {
@@ -267,8 +268,8 @@ async function extractAnimations(page, config = defaultConfig) {
  * Extract animations from a single page
  * @param {import('playwright').Page} page - Playwright page object
  * @param {string} url - URL to navigate to (optional)
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Animation data
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Animation data
  */
 async function extractAnimationsFromPage(page, url = null, config = defaultConfig) {
   // Initialize telemetry if enabled
@@ -368,7 +369,7 @@ async function extractAnimationsFromPage(page, url = null, config = defaultConfi
 /**
  * Generate a visualization of animation styles
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} animationData - Animation data
+ * @param {object} animationData - Animation data
  * @param {string} screenshotsDir - Directory to save screenshots
  * @returns {Promise<void>}
  */
@@ -498,12 +499,12 @@ async function generateAnimationVisualization(page, animationData, screenshotsDi
 
 /**
  * Main function to extract animations from crawled pages
- * @param {Object} customConfig - Custom configuration
+ * @param {object} customConfig - Custom configuration
  * @param {import('playwright').Browser} browser - Browser instance (optional)
- * @param {Object} logger - Logger object (optional)
- * @returns {Promise<Object>} - Animation results
+ * @param {object} logger - Logger object (optional)
+ * @returns {Promise<object>} - Animation results
  */
-async function extractAnimationsFromCrawledPages(customConfig = {}, browser = null, logger ) {
+async function extractAnimationsFromCrawledPages(customConfig = {}, browser = null, logger) {
   // If logger is not provided, get a configured logger from config
   if (!logger) {
     const { getLogger } = await import('../utils/console-manager.js');

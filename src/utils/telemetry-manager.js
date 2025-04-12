@@ -41,8 +41,8 @@ const metrics = [];
 
 /**
  * Initialize telemetry with custom configuration
- * @param {Object} customConfig - Custom configuration
- * @returns {Object} Telemetry instance
+ * @param {object} customConfig - Custom configuration
+ * @returns {object} Telemetry instance
  */
 export function initTelemetry(customConfig = {}) {
   const config = { ...defaultConfig, ...customConfig };
@@ -64,7 +64,7 @@ export function initTelemetry(customConfig = {}) {
 /**
  * Start a timer for an operation
  * @param {string} operationName - Name of the operation
- * @param {Object} metadata - Additional metadata
+ * @param {object} metadata - Additional metadata
  * @returns {string} Timer ID
  */
 export function startTimer(operationName, metadata = {}) {
@@ -80,8 +80,8 @@ export function startTimer(operationName, metadata = {}) {
 /**
  * Stop a timer and record the metric
  * @param {string} timerId - Timer ID
- * @param {Object} additionalMetadata - Additional metadata
- * @returns {Object} Metric data
+ * @param {object} additionalMetadata - Additional metadata
+ * @returns {object} Metric data
  */
 export function stopTimer(timerId, additionalMetadata = {}) {
   const timer = timers.get(timerId);
@@ -99,8 +99,8 @@ export function stopTimer(timerId, additionalMetadata = {}) {
  * Record a metric
  * @param {string} operationName - Name of the operation
  * @param {number} duration - Duration in milliseconds
- * @param {Object} metadata - Additional metadata
- * @returns {Object} Metric data
+ * @param {object} metadata - Additional metadata
+ * @returns {object} Metric data
  */
 export function recordMetric(operationName, duration, metadata = {}) {
   const metric = {
@@ -125,8 +125,8 @@ export function getMetrics() {
 /**
  * Generate a telemetry report
  * @param {string} reportName - Name of the report
- * @param {Object} customConfig - Custom configuration
- * @returns {Object} Report data
+ * @param {object} customConfig - Custom configuration
+ * @returns {object} Report data
  */
 export function generateReport(reportName, customConfig = {}) {
   const config = { ...defaultConfig, ...customConfig };
@@ -154,8 +154,8 @@ export function generateReport(reportName, customConfig = {}) {
  * Run a function with telemetry
  * @param {Function} fn - Function to run
  * @param {string} operationName - Name of the operation
- * @param {Object} metadata - Additional metadata
- * @param {Object} telemetry - Telemetry instance
+ * @param {object} metadata - Additional metadata
+ * @param {object} telemetry - Telemetry instance
  * @returns {Promise<any>} Function result
  */
 export async function withTelemetry(fn, operationName, metadata = {}, telemetry) {

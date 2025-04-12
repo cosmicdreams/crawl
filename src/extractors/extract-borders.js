@@ -1,9 +1,11 @@
-// @ts-check
-import { chromium } from '@playwright/test';
+
 import fs from 'fs';
 import path from 'path';
-import telemetryManager from '../utils/telemetry-manager.js';
 import { fileURLToPath } from 'url';
+
+import { chromium } from '@playwright/test';
+
+import telemetryManager from '../utils/telemetry-manager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -91,8 +93,8 @@ export const defaultConfig = {
 /**
  * Function to evaluate borders on a page
  * This function is serialized and executed in the browser context
- * @param {Object} config - Configuration object passed from Node.js
- * @returns {Object} - Extracted border data
+ * @param {object} config - Configuration object passed from Node.js
+ * @returns {object} - Extracted border data
  */
 function evaluateBorders(config) {
     const styles = {};
@@ -219,8 +221,8 @@ function evaluateBorders(config) {
 /**
  * Extract border styles from a page
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Border styles
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Border styles
  */
 async function extractBorders(page, config = defaultConfig) {
   try {
@@ -243,8 +245,8 @@ async function extractBorders(page, config = defaultConfig) {
  * Extract borders from a single page
  * @param {import('playwright').Page} page - Playwright page object
  * @param {string} url - URL to navigate to (optional)
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Border data
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Border data
  */
 async function extractBordersFromPage(page, url = null, config = defaultConfig) {
   // Initialize telemetry if enabled
@@ -344,7 +346,7 @@ async function extractBordersFromPage(page, url = null, config = defaultConfig) 
 /**
  * Generate a visualization of border styles
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} borderData - Border data
+ * @param {object} borderData - Border data
  * @param {string} screenshotsDir - Directory to save screenshots
  * @returns {Promise<void>}
  */
@@ -462,12 +464,12 @@ async function generateBorderVisualization(page, borderData, screenshotsDir) {
 
 /**
  * Main function to extract borders from crawled pages
- * @param {Object} customConfig - Custom configuration
+ * @param {object} customConfig - Custom configuration
  * @param {import('playwright').Browser} browser - Browser instance (optional)
- * @param {Object} logger - Logger object (optional)
- * @returns {Promise<Object>} - Border results
+ * @param {object} logger - Logger object (optional)
+ * @returns {Promise<object>} - Border results
  */
-async function extractBordersFromCrawledPages(customConfig = {}, browser = null, logger ) {
+async function extractBordersFromCrawledPages(customConfig = {}, browser = null, logger) {
   // If logger is not provided, get a configured logger from config
   if (!logger) {
     const { getLogger } = await import('../utils/console-manager.js');

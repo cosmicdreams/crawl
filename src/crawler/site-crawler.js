@@ -1,19 +1,20 @@
-// @ts-check
-import { chromium } from '@playwright/test';
+
 import fs from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-import { 
+
+import { chromium } from '@playwright/test';
+
+import {
   extractComponents,
   generateComponentLibrary,
   saveComponentLibrary,
   generateComponentReport
 } from '../extractors/extract-components.js';
-import { 
-  readConfig, 
-  getDefaultConfig, 
-  readPaths, 
+import {
+  readConfig,
+  getDefaultConfig,
+  readPaths,
   savePaths,
   DEFAULT_PATHS_PATH,
   pathsFileExists
@@ -23,21 +24,13 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-// Create a configurable crawler config object to store the latest config
-// This will be updated when crawlSite runs
-let _crawlConfig = {
-  baseUrl: '',
-  maxPages: 0,
-  timeout: 30000
-};
-
 /**
  * Site crawler using Playwright
  * This script crawls a website starting from a given URL and collects all internal links
  */
 
 /**
- * @typedef {Object} CrawledPage
+ * @typedef {object} CrawledPage
  * @property {string} url
  * @property {string} title
  * @property {number} status
@@ -48,14 +41,14 @@ let _crawlConfig = {
  */
 
 /**
- * @typedef {Object} CrawlError
+ * @typedef {object} CrawlError
  * @property {string} url
  * @property {string} error
  * @property {string} timestamp
  */
 
 /**
- * @typedef {Object} ComponentData
+ * @typedef {object} ComponentData
  * @property {string} url
  * @property {string} path
  * @property {string} title
@@ -64,7 +57,7 @@ let _crawlConfig = {
  */
 
 /**
- * @typedef {Object} CrawlResults
+ * @typedef {object} CrawlResults
  * @property {string} startTime
  * @property {string} baseUrl
  * @property {CrawledPage[]} crawledPages
@@ -80,7 +73,7 @@ let _crawlConfig = {
  * Crawl a website starting from a given URL
  * @param {string} baseUrl - Base URL to start crawling from
  * @param {number} maxPages - Maximum number of pages to crawl
- * @param {Object} options - Additional options
+ * @param {object} options - Additional options
  * @returns {Promise<CrawlResults>} - Crawl results
  */
 export async function crawlSite(baseUrl, maxPages, options = {}) {
@@ -109,7 +102,7 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
   console.log('- baseUrl parameter:', baseUrl);
   console.log('- fileConfig.baseUrl:', fileConfig.baseUrl);
   console.log('- defaultConfig.baseUrl:', defaultConfig.baseUrl);
-  
+
   // Default crawler configuration
   const config = {
     // Base URL of the site to crawl (command line takes precedence)
@@ -157,22 +150,19 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
 
   // Create the local crawler config for this run
   const localCrawlConfig = { ...config };
-  
+
   // Note: We don't need to reassign baseUrl or maxPages here because
   // we already established the correct priority in the config object above
-  
+
   // Add any additional options not already handled
   if (options) {
     // Filter out the options we've already processed
     const { baseUrl: _, maxPages: __, ...otherOptions } = options;
     Object.assign(localCrawlConfig, otherOptions);
   }
-  
-  // Update the internal _crawlConfig so it can be accessed by other modules via getCrawlConfig()
-  _crawlConfig = { ...localCrawlConfig };
 
-  console.log(`Starting crawl of ${localCrawlConfig.baseUrl}`);
-  console.log(`Max pages: ${localCrawlConfig.maxPages === -1 ? 'Unlimited' : localCrawlConfig.maxPages}`);
+  console.log(`Starting crawl of ${ localCrawlConfig.baseUrl}`);
+  console.log(`Max pages: ${ localCrawlConfig.maxPages === -1 ? 'Unlimited' : localCrawlConfig.maxPages}`);
 
   const browser = await chromium.launch();
   const context = await browser.newContext({
@@ -191,31 +181,31 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
   let usingSavedPaths = false;
 
   // Use the readPaths function from config-manager
-  console.log('Reading paths from:', crawlConfig.pathsFile);
-  const pathsData = readPaths(crawlConfig.pathsFile);
-  
+  console.log('Reading paths from:', localCrawlConfig.pathsFile);
+  const pathsData = readPaths(localCrawlConfig.pathsFile);
+
   console.log('Paths data:', pathsData ? 'Found' : 'Not found');
   if (pathsData) {
     console.log('Paths data baseUrl:', pathsData.baseUrl);
     console.log('Paths count:', pathsData.paths ? pathsData.paths.length : 0);
   }
-  
+
   if (pathsData && pathsData.paths && Array.isArray(pathsData.paths) && pathsData.paths.length > 0) {
     initialPaths = pathsData.paths;
     usingSavedPaths = true;
-    console.log(`Loaded ${initialPaths.length} paths from ${crawlConfig.pathsFile}`);
-    
+    console.log(`Loaded ${initialPaths.length} paths from ${localCrawlConfig.pathsFile}`);
+
     // Ensure we're using the correct baseUrl from the paths file
     if (pathsData.baseUrl) {
       console.log(`Using baseUrl from paths file: ${pathsData.baseUrl}`);
       // Only override if not explicitly set in command line options
       if (!options.baseUrl && !baseUrl) {
-        localCrawlConfig.baseUrl = pathsData.baseUrl;
-        console.log(`Setting crawler baseUrl to: ${localCrawlConfig.baseUrl}`);
+         localCrawlConfig.baseUrl = pathsData.baseUrl;
+        console.log(`Setting crawler baseUrl to: ${ localCrawlConfig.baseUrl}`);
       }
     }
   } else {
-    console.log(`No valid paths found. Will create ${localCrawlConfig.pathsFile} after crawling.`);
+    console.log(`No valid paths found. Will create ${ localCrawlConfig.pathsFile} after crawling.`);
   }
 
   // Queue of URLs to crawl
@@ -228,7 +218,7 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
   /** @type {CrawlResults} */
   const results = {
     startTime: new Date().toISOString(),
-    baseUrl: crawlConfig.baseUrl,
+    baseUrl: localCrawlConfig.baseUrl,
     crawledPages: [],
     errors: [],
     components: [],
@@ -239,9 +229,9 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
   };
 
   // Create screenshot directory if it doesn't exist and screenshots are enabled
-  if (crawlConfig.saveScreenshots) {
-    if (!fs.existsSync(crawlConfig.screenshotDir)) {
-      fs.mkdirSync(crawlConfig.screenshotDir, { recursive: true });
+  if (localCrawlConfig.saveScreenshots) {
+    if (!fs.existsSync(localCrawlConfig.screenshotDir)) {
+      fs.mkdirSync(localCrawlConfig.screenshotDir, { recursive: true });
     }
   }
 
@@ -289,7 +279,7 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
     });
 
     // Step 2: Select representative paths from each pattern group
-    const dedupedPaths = ['/'];  // Always include root path
+    const dedupedPaths = ['/']; // Always include root path
 
     Object.entries(patternGroups).forEach(([pattern, pathsInPattern]) => {
       // If there's only one path in this pattern, include it
@@ -446,7 +436,7 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
       continue;
     }
 
-    console.log(`Crawling (${visited.size + 1}/${localCrawlConfig.maxPages === -1 ? '∞' : localCrawlConfig.maxPages}): ${url}`);
+    console.log(`Crawling (${visited.size + 1}/${ localCrawlConfig.maxPages === -1 ? '∞' : localCrawlConfig.maxPages}): ${url}`);
 
     try {
       // Navigate to the page
@@ -648,14 +638,14 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
 
     // Save paths using our config manager
     savePaths(pathsData, localCrawlConfig.pathsFile);
-    console.log(`\nSaved ${organizedPaths.length} unique, organized paths to ${localCrawlConfig.pathsFile}`);
+    console.log(`\nSaved ${organizedPaths.length} unique, organized paths to ${ localCrawlConfig.pathsFile}`);
   }
 
   console.log('\nCrawl completed!');
   console.log(`Total pages crawled: ${results.totalPages}`);
   console.log(`Total errors: ${results.totalErrors}`);
   console.log(`Duration: ${results.duration} seconds`);
-  console.log(`Results saved to: ${localCrawlConfig.outputFile}`);
+  console.log(`Results saved to: ${ localCrawlConfig.outputFile}`);
 
   // Generate component library if enabled and components were found
   if (localCrawlConfig.components && localCrawlConfig.components.enabled && results.components.length > 0) {
@@ -670,8 +660,8 @@ export async function crawlSite(baseUrl, maxPages, options = {}) {
     // Generate HTML report
     generateComponentReport(componentLibrary, localCrawlConfig.components.reportFile);
 
-    console.log(`Component library saved to: ${localCrawlConfig.components.outputFile}`);
-    console.log(`Component report saved to: ${localCrawlConfig.components.reportFile}`);
+    console.log(`Component library saved to: ${ localCrawlConfig.components.outputFile}`);
+    console.log(`Component report saved to: ${ localCrawlConfig.components.reportFile}`);
   }
 
   // Close browser
@@ -696,8 +686,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 }
 
 // Create a configurable crawler config that will be updated when crawlSite runs
-// Using let instead of const allows the crawlConfig to be updated when crawlSite is called
-export let crawlConfig = {
+// Using let instead of const allows the localCrawlConfig to be updated when crawlSite is called
+export let localCrawlConfig = {
   baseUrl: '',
   maxPages: 0,
   timeout: 30000

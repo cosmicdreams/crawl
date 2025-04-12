@@ -9,4 +9,4 @@ export default {
   blue: (text) => chalk.blue(text),
   bold: (text) => chalk.bold(text),
   underline: (text) => chalk.underline(text)
-}; 
+};

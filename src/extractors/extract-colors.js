@@ -1,9 +1,10 @@
-// @ts-check
-import { chromium } from '@playwright/test';
+
 import fs from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+
+import { chromium } from '@playwright/test';
+
 import telemetryManager from '../utils/telemetry-manager.js';
 
 /**
@@ -20,13 +21,13 @@ const __dirname = dirname(__filename);
 /** @typedef {import('@playwright/test').Page} Page */
 
 /**
- * @typedef {Object} CSSStyleRule
+ * @typedef {object} CSSStyleRule
  * @property {CSSStyleDeclaration} style
  * @property {number} type
  */
 
 /**
- * @typedef {Object} ExtractorConfig
+ * @typedef {object} ExtractorConfig
  * @property {string} baseUrl
  * @property {string} inputFile
  * @property {string} outputFile
@@ -35,8 +36,8 @@ const __dirname = dirname(__filename);
  */
 
 /**
- * @typedef {Object} ExtractorResults
- * @property {Object.<string, Array<{id: string, classes: string, styles: Object}>>} elementStyles
+ * @typedef {object} ExtractorResults
+ * @property {Object.<string, Array<{id: string, classes: string, styles: object}>>} elementStyles
  * @property {string[]} colorValues
  * @property {Object.<string, string>} cssVars
  */
@@ -129,8 +130,8 @@ export const defaultConfig = {
 /**
  * Extract color styles from a page
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Color styles
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Color styles
  */
 async function extractColors(page, config = defaultConfig) {
   try {
@@ -258,7 +259,7 @@ async function extractColors(page, config = defaultConfig) {
  * @param {Page} page - Playwright page object
  * @param {string} [url] - URL to navigate to (optional)
  * @param {ExtractorConfig} config - Configuration object
- * @returns {Promise<Object>} - Color data
+ * @returns {Promise<object>} - Color data
  */
 async function extractColorsFromPage(page, url, config = defaultConfig) {
   // Initialize telemetry if enabled
@@ -432,8 +433,8 @@ async function generateColorSwatches(page, colors, screenshotsDir) {
  * Main function to extract colors from crawled pages
  * @param {ExtractorConfig} customConfig - Custom configuration
  * @param {Browser|undefined} browser - Browser instance (optional)
- * @param {Object} logger - Logger object (optional)
- * @returns {Promise<Object>} - Color results
+ * @param {object} logger - Logger object (optional)
+ * @returns {Promise<object>} - Color results
  */
 async function extractColorsFromCrawledPages(customConfig = {}, browser = null, logger) {
   // If logger is not provided, get a configured logger from config
@@ -441,10 +442,10 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
     const { getLogger } = await import('../utils/console-manager.js');
     logger = getLogger(customConfig, 'colors');
   }
-  
+
   // Variable to track if we should close the browser
   let shouldCloseBrowser = false;
-  
+
   // Merge configurations
   const config = { ...defaultConfig, ...customConfig };
 
@@ -466,7 +467,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
 
     // Read crawl results with a spinner
     const readingSpinner = logger.spinner('Reading crawl results');
-    
+
     if (!fs.existsSync(config.inputFile)) {
       readingSpinner.fail(`Input file not found: ${config.inputFile}`);
       return {
@@ -493,7 +494,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
 
     // Launch browser with spinner
     const browserSpinner = logger.spinner('Launching browser');
-    
+
     // Record browser creation in telemetry if enabled
     let browserTimerId;
     if (telemetry && !browser) {
@@ -506,12 +507,12 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
     if (telemetry && browserTimerId) {
       telemetry.stopTimer(browserTimerId);
     }
-    
+
     browserSpinner.succeed('Browser launched');
 
     // Create browser context with spinner
     const contextSpinner = logger.spinner('Creating browser context');
-    
+
     // Record context creation in telemetry if enabled
     let contextTimerId;
     if (telemetry) {
@@ -527,7 +528,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
     if (telemetry && contextTimerId) {
       telemetry.stopTimer(contextTimerId);
     }
-    
+
     contextSpinner.succeed('Browser context created');
 
     // Create a new page
@@ -546,7 +547,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
     for (let i = 0; i < pagesToAnalyze.length; i++) {
       const pageInfo = pagesToAnalyze[i];
       const pageSpinner = logger.spinner(`Analyzing page ${i + 1}/${pagesToAnalyze.length}: ${pageInfo.url}`);
-      
+
       try {
         // Extract colors from page with telemetry if enabled
         let result;
@@ -567,7 +568,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
           pageSpinner.fail(`Error analyzing ${pageInfo.url}: ${error.message}`);
           continue;
         }
-        
+
         pageSpinner.text = `Analyzed page ${i + 1}/${pagesToAnalyze.length}`;
 
         // Add to results
@@ -624,7 +625,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
     if (config.generateVisualizations) {
       // Create visualization spinner
       const vizSpinner = logger.spinner('Generating color swatches');
-      
+
       try {
         // Record swatch generation in telemetry if enabled
         if (telemetry) {
@@ -637,7 +638,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
         } else {
           await generateColorSwatches(page, Array.from(colorSet), config.screenshotsDir);
         }
-        
+
         vizSpinner.succeed('Color swatches generated successfully');
       } catch (error) {
         vizSpinner.fail(`Could not generate color swatches: ${error.message}`);
@@ -656,7 +657,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
     if (config.writeToFile) {
       // Create save file spinner
       const saveSpinner = logger.spinner(`Saving color results to file`);
-      
+
       try {
         // Record file writing in telemetry if enabled
         if (telemetry) {
@@ -693,7 +694,7 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
 
     // Complete the extraction task with success
     extractionTask.complete('Color extraction completed successfully');
-    
+
     // Show summary of results
     logger.success(`Pages analyzed: ${results.pagesAnalyzed.length}`);
     logger.info(`Unique color values found: ${results.allColorValues.length}`);
@@ -741,13 +742,16 @@ async function extractColorsFromCrawledPages(customConfig = {}, browser = null, 
   }
 }
 
+/**
+ *
+ */
 async function run() {
   // If this script is run directly, execute the extraction
   if (import.meta.url === new URL(import.meta.url).href) {
     // Get the default logger
     const { defaultLogger } = await import('../utils/console-manager.js');
     const logger = defaultLogger;
-    
+
     extractColorsFromCrawledPages({}, null, logger).then(result => {
       if (!result.success) {
         logger.error('Color extraction failed:', result.error.message);

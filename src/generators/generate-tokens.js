@@ -1,4 +1,4 @@
-// @ts-check
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -40,8 +40,8 @@ const config = {
 
 /**
  * Generate typography tokens from extracted data
- * @param {Object} typographyData - Extracted typography data
- * @returns {Object} Typography tokens
+ * @param {object} typographyData - Extracted typography data
+ * @returns {object} Typography tokens
  */
 function generateTypographyTokens(typographyData) {
   if (!typographyData) {
@@ -251,8 +251,8 @@ function generateTypographyTokens(typographyData) {
 
 /**
  * Generate color tokens from extracted data
- * @param {Object} colorData - Extracted color data
- * @returns {Object} Color tokens
+ * @param {object} colorData - Extracted color data
+ * @returns {object} Color tokens
  */
 function generateColorTokens(colorData) {
   if (!colorData) {
@@ -454,8 +454,8 @@ function generateColorTokens(colorData) {
 
 /**
  * Generate spacing tokens from extracted data
- * @param {Object} spacingData - Extracted spacing data
- * @returns {Object} Spacing tokens
+ * @param {object} spacingData - Extracted spacing data
+ * @returns {object} Spacing tokens
  */
 function generateSpacingTokens(spacingData) {
   if (!spacingData) {
@@ -607,8 +607,8 @@ function generateSpacingTokens(spacingData) {
 
 /**
  * Generate border tokens from extracted data
- * @param {Object} borderData - Extracted border data
- * @returns {Object} Border tokens
+ * @param {object} borderData - Extracted border data
+ * @returns {object} Border tokens
  */
 function generateBorderTokens(borderData) {
   if (!borderData) {
@@ -770,8 +770,8 @@ function generateBorderTokens(borderData) {
 
 /**
  * Generate animation tokens from extracted data
- * @param {Object} animationData - Extracted animation data
- * @returns {Object} Animation tokens
+ * @param {object} animationData - Extracted animation data
+ * @returns {object} Animation tokens
  */
 function generateAnimationTokens(animationData) {
   if (!animationData) {
@@ -965,7 +965,7 @@ async function generateDesignTokens() {
 
 /**
  * Generate CSS files from tokens
- * @param {Object} tokens - Design tokens
+ * @param {object} tokens - Design tokens
  */
 function generateCSSFiles(tokens) {
   console.log('Generating CSS files...');
@@ -980,12 +980,12 @@ function generateCSSFiles(tokens) {
 `;
 
   // Add typography variables
-  if (Object.keys(tokens.typography).length > 0) {
+  if (tokens.typography && Object.keys(tokens.typography).length > 0) {
     variablesCSS += `  /* Typography */
 `;
 
     // Font families
-    if (Object.keys(tokens.typography.fontFamily).length > 0) {
+    if (tokens.typography.fontFamily && Object.keys(tokens.typography.fontFamily).length > 0) {
       Object.entries(tokens.typography.fontFamily).forEach(([name, value]) => {
         variablesCSS += `  --font-family-${name}: ${value};
 `;
@@ -993,7 +993,7 @@ function generateCSSFiles(tokens) {
     }
 
     // Font sizes
-    if (Object.keys(tokens.typography.fontSize).length > 0) {
+    if (tokens.typography.fontSize && Object.keys(tokens.typography.fontSize).length > 0) {
       Object.entries(tokens.typography.fontSize).forEach(([name, value]) => {
         variablesCSS += `  --font-size-${name}: ${value};
 `;
@@ -1001,7 +1001,7 @@ function generateCSSFiles(tokens) {
     }
 
     // Font weights
-    if (Object.keys(tokens.typography.fontWeight).length > 0) {
+    if (tokens.typography.fontWeight && Object.keys(tokens.typography.fontWeight).length > 0) {
       Object.entries(tokens.typography.fontWeight).forEach(([name, value]) => {
         variablesCSS += `  --font-weight-${name}: ${value};
 `;
@@ -1009,7 +1009,7 @@ function generateCSSFiles(tokens) {
     }
 
     // Line heights
-    if (Object.keys(tokens.typography.lineHeight).length > 0) {
+    if (tokens.typography.lineHeight && Object.keys(tokens.typography.lineHeight).length > 0) {
       Object.entries(tokens.typography.lineHeight).forEach(([name, value]) => {
         variablesCSS += `  --line-height-${name}: ${value};
 `;
@@ -1017,7 +1017,7 @@ function generateCSSFiles(tokens) {
     }
 
     // Letter spacing
-    if (Object.keys(tokens.typography.letterSpacing).length > 0) {
+    if (tokens.typography.letterSpacing && Object.keys(tokens.typography.letterSpacing).length > 0) {
       Object.entries(tokens.typography.letterSpacing).forEach(([name, value]) => {
         variablesCSS += `  --letter-spacing-${name}: ${value};
 `;
@@ -1026,13 +1026,13 @@ function generateCSSFiles(tokens) {
   }
 
   // Add color variables
-  if (Object.keys(tokens.colors).length > 0) {
+  if (tokens.colors && Object.keys(tokens.colors).length > 0) {
     variablesCSS += `
   /* Colors */
 `;
 
     // Primary colors
-    if (Object.keys(tokens.colors.primary).length > 0) {
+    if (tokens.colors.primary && Object.keys(tokens.colors.primary).length > 0) {
       Object.entries(tokens.colors.primary).forEach(([name, value]) => {
         variablesCSS += `  --color-primary-${name}: ${value};
 `;
@@ -1040,7 +1040,7 @@ function generateCSSFiles(tokens) {
     }
 
     // Secondary colors
-    if (Object.keys(tokens.colors.secondary).length > 0) {
+    if (tokens.colors.secondary && Object.keys(tokens.colors.secondary).length > 0) {
       Object.entries(tokens.colors.secondary).forEach(([name, value]) => {
         variablesCSS += `  --color-secondary-${name}: ${value};
 `;
@@ -1048,7 +1048,7 @@ function generateCSSFiles(tokens) {
     }
 
     // Neutral colors
-    if (Object.keys(tokens.colors.neutral).length > 0) {
+    if (tokens.colors.neutral && Object.keys(tokens.colors.neutral).length > 0) {
       Object.entries(tokens.colors.neutral).forEach(([name, value]) => {
         variablesCSS += `  --color-${name}: ${value};
 `;
@@ -1056,7 +1056,7 @@ function generateCSSFiles(tokens) {
     }
 
     // Accent colors
-    if (Object.keys(tokens.colors.accent).length > 0) {
+    if (tokens.colors.accent && Object.keys(tokens.colors.accent).length > 0) {
       Object.entries(tokens.colors.accent).forEach(([name, value]) => {
         variablesCSS += `  --color-${name}: ${value};
 `;
@@ -1064,7 +1064,7 @@ function generateCSSFiles(tokens) {
     }
 
     // Semantic colors
-    if (Object.keys(tokens.colors.semantic).length > 0) {
+    if (tokens.colors.semantic && Object.keys(tokens.colors.semantic).length > 0) {
       Object.entries(tokens.colors.semantic).forEach(([name, value]) => {
         variablesCSS += `  --color-${name}: ${value};
 `;
@@ -1073,7 +1073,7 @@ function generateCSSFiles(tokens) {
   }
 
   // Add spacing variables
-  if (Object.keys(tokens.spacing).length > 0) {
+  if (tokens.spacing && Object.keys(tokens.spacing).length > 0) {
     variablesCSS += `
   /* Spacing */
 `;
@@ -1088,7 +1088,7 @@ function generateCSSFiles(tokens) {
   }
 
   // Add border variables
-  if (Object.keys(tokens.borders).length > 0) {
+  if (tokens.borders && Object.keys(tokens.borders).length > 0) {
     variablesCSS += `
   /* Borders */
 `;
@@ -1119,7 +1119,7 @@ function generateCSSFiles(tokens) {
   }
 
   // Add animation variables
-  if (Object.keys(tokens.animations).length > 0) {
+  if (tokens.animations && Object.keys(tokens.animations).length > 0) {
     variablesCSS += `
   /* Animations */
 `;
@@ -1161,7 +1161,7 @@ function generateCSSFiles(tokens) {
 /* Font families */
 `;
 
-  if (Object.keys(tokens.typography.fontFamily).length > 0) {
+  if (tokens.typography && tokens.typography.fontFamily && Object.keys(tokens.typography.fontFamily).length > 0) {
     Object.entries(tokens.typography.fontFamily).forEach(([name, value]) => {
       typographyCSS += `.font-family-${name} {
   font-family: var(--font-family-${name});
@@ -1173,7 +1173,7 @@ function generateCSSFiles(tokens) {
 
   typographyCSS += `/* Font sizes */
 `;
-  if (Object.keys(tokens.typography.fontSize).length > 0) {
+  if (tokens.typography && tokens.typography.fontSize && Object.keys(tokens.typography.fontSize).length > 0) {
     Object.entries(tokens.typography.fontSize).forEach(([name, value]) => {
       typographyCSS += `.font-size-${name} {
   font-size: var(--font-size-${name});
@@ -1185,7 +1185,7 @@ function generateCSSFiles(tokens) {
 
   typographyCSS += `/* Font weights */
 `;
-  if (Object.keys(tokens.typography.fontWeight).length > 0) {
+  if (tokens.typography && tokens.typography.fontWeight && Object.keys(tokens.typography.fontWeight).length > 0) {
     Object.entries(tokens.typography.fontWeight).forEach(([name, value]) => {
       typographyCSS += `.font-weight-${name} {
   font-weight: var(--font-weight-${name});
@@ -1197,7 +1197,7 @@ function generateCSSFiles(tokens) {
 
   typographyCSS += `/* Line heights */
 `;
-  if (Object.keys(tokens.typography.lineHeight).length > 0) {
+  if (tokens.typography && tokens.typography.lineHeight && Object.keys(tokens.typography.lineHeight).length > 0) {
     Object.entries(tokens.typography.lineHeight).forEach(([name, value]) => {
       typographyCSS += `.line-height-${name} {
   line-height: var(--line-height-${name});
@@ -1209,7 +1209,7 @@ function generateCSSFiles(tokens) {
 
   typographyCSS += `/* Letter spacing */
 `;
-  if (Object.keys(tokens.typography.letterSpacing).length > 0) {
+  if (tokens.typography && tokens.typography.letterSpacing && Object.keys(tokens.typography.letterSpacing).length > 0) {
     Object.entries(tokens.typography.letterSpacing).forEach(([name, value]) => {
       typographyCSS += `.letter-spacing-${name} {
   letter-spacing: var(--letter-spacing-${name});
@@ -1233,7 +1233,7 @@ function generateCSSFiles(tokens) {
 `;
 
   // Primary colors
-  if (Object.keys(tokens.colors.primary).length > 0) {
+  if (tokens.colors && tokens.colors.primary && Object.keys(tokens.colors.primary).length > 0) {
     Object.entries(tokens.colors.primary).forEach(([name, value]) => {
       colorsCSS += `.text-primary-${name} {
   color: var(--color-primary-${name});
@@ -1244,7 +1244,7 @@ function generateCSSFiles(tokens) {
   }
 
   // Secondary colors
-  if (Object.keys(tokens.colors.secondary).length > 0) {
+  if (tokens.colors && tokens.colors.secondary && Object.keys(tokens.colors.secondary).length > 0) {
     Object.entries(tokens.colors.secondary).forEach(([name, value]) => {
       colorsCSS += `.text-secondary-${name} {
   color: var(--color-secondary-${name});
@@ -1255,7 +1255,7 @@ function generateCSSFiles(tokens) {
   }
 
   // Neutral colors
-  if (Object.keys(tokens.colors.neutral).length > 0) {
+  if (tokens.colors && tokens.colors.neutral && Object.keys(tokens.colors.neutral).length > 0) {
     Object.entries(tokens.colors.neutral).forEach(([name, value]) => {
       colorsCSS += `.text-${name} {
   color: var(--color-${name});
@@ -1269,7 +1269,7 @@ function generateCSSFiles(tokens) {
 `;
 
   // Primary colors
-  if (Object.keys(tokens.colors.primary).length > 0) {
+  if (tokens.colors && tokens.colors.primary && Object.keys(tokens.colors.primary).length > 0) {
     Object.entries(tokens.colors.primary).forEach(([name, value]) => {
       colorsCSS += `.bg-primary-${name} {
   background-color: var(--color-primary-${name});
@@ -1280,7 +1280,7 @@ function generateCSSFiles(tokens) {
   }
 
   // Secondary colors
-  if (Object.keys(tokens.colors.secondary).length > 0) {
+  if (tokens.colors && tokens.colors.secondary && Object.keys(tokens.colors.secondary).length > 0) {
     Object.entries(tokens.colors.secondary).forEach(([name, value]) => {
       colorsCSS += `.bg-secondary-${name} {
   background-color: var(--color-secondary-${name});
@@ -1291,7 +1291,7 @@ function generateCSSFiles(tokens) {
   }
 
   // Neutral colors
-  if (Object.keys(tokens.colors.neutral).length > 0) {
+  if (tokens.colors && tokens.colors.neutral && Object.keys(tokens.colors.neutral).length > 0) {
     Object.entries(tokens.colors.neutral).forEach(([name, value]) => {
       colorsCSS += `.bg-${name} {
   background-color: var(--color-${name});
@@ -1314,7 +1314,7 @@ function generateCSSFiles(tokens) {
 /* Margin utilities */
 `;
 
-  if (Object.keys(tokens.spacing.scale).length > 0) {
+  if (tokens.spacing && tokens.spacing.scale && Object.keys(tokens.spacing.scale).length > 0) {
     Object.entries(tokens.spacing.scale).forEach(([name, value]) => {
       spacingCSS += `.m-${name} {
   margin: var(--spacing-${name});
@@ -1500,7 +1500,8 @@ function generateCSSFiles(tokens) {
       animationsCSS += `@keyframes ${name} {
 `;
 
-      keyframes.forEach(keyframe => {
+      if (Array.isArray(keyframes)) {
+        keyframes.forEach(keyframe => {
         animationsCSS += `  ${keyframe.keyText} {
 `;
 
@@ -1512,6 +1513,7 @@ function generateCSSFiles(tokens) {
         animationsCSS += `  }
 `;
       });
+      }
 
       animationsCSS += `}
 
@@ -1530,7 +1532,7 @@ function generateCSSFiles(tokens) {
 
 /**
  * Generate JSON token files
- * @param {Object} tokens - Design tokens
+ * @param {object} tokens - Design tokens
  */
 function generateJSONTokens(tokens) {
   console.log('Generating JSON token files...');
@@ -1562,7 +1564,7 @@ function generateJSONTokens(tokens) {
   };
 
   // Convert typography tokens to Figma format
-  if (Object.keys(tokens.typography.fontFamily).length > 0) {
+  if (tokens.typography && tokens.typography.fontFamily && Object.keys(tokens.typography.fontFamily).length > 0) {
     figmaTokens.global.typography.fontFamilies = {};
     Object.entries(tokens.typography.fontFamily).forEach(([name, value]) => {
       figmaTokens.global.typography.fontFamilies[name] = {
@@ -1572,7 +1574,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.typography.fontSize).length > 0) {
+  if (tokens.typography && tokens.typography.fontSize && Object.keys(tokens.typography.fontSize).length > 0) {
     figmaTokens.global.typography.fontSize = {};
     Object.entries(tokens.typography.fontSize).forEach(([name, value]) => {
       figmaTokens.global.typography.fontSize[name] = {
@@ -1582,7 +1584,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.typography.fontWeight).length > 0) {
+  if (tokens.typography && tokens.typography.fontWeight && Object.keys(tokens.typography.fontWeight).length > 0) {
     figmaTokens.global.typography.fontWeight = {};
     Object.entries(tokens.typography.fontWeight).forEach(([name, value]) => {
       figmaTokens.global.typography.fontWeight[name] = {
@@ -1592,7 +1594,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.typography.lineHeight).length > 0) {
+  if (tokens.typography && tokens.typography.lineHeight && Object.keys(tokens.typography.lineHeight).length > 0) {
     figmaTokens.global.typography.lineHeight = {};
     Object.entries(tokens.typography.lineHeight).forEach(([name, value]) => {
       figmaTokens.global.typography.lineHeight[name] = {
@@ -1602,7 +1604,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.typography.letterSpacing).length > 0) {
+  if (tokens.typography && tokens.typography.letterSpacing && Object.keys(tokens.typography.letterSpacing).length > 0) {
     figmaTokens.global.typography.letterSpacing = {};
     Object.entries(tokens.typography.letterSpacing).forEach(([name, value]) => {
       figmaTokens.global.typography.letterSpacing[name] = {
@@ -1613,7 +1615,7 @@ function generateJSONTokens(tokens) {
   }
 
   // Convert color tokens to Figma format
-  if (Object.keys(tokens.colors.primary).length > 0) {
+  if (tokens.colors && tokens.colors.primary && Object.keys(tokens.colors.primary).length > 0) {
     figmaTokens.global.color.primary = {};
     Object.entries(tokens.colors.primary).forEach(([name, value]) => {
       figmaTokens.global.color.primary[name] = {
@@ -1623,7 +1625,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.colors.secondary).length > 0) {
+  if (tokens.colors && tokens.colors.secondary && Object.keys(tokens.colors.secondary).length > 0) {
     figmaTokens.global.color.secondary = {};
     Object.entries(tokens.colors.secondary).forEach(([name, value]) => {
       figmaTokens.global.color.secondary[name] = {
@@ -1633,7 +1635,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.colors.neutral).length > 0) {
+  if (tokens.colors && tokens.colors.neutral && Object.keys(tokens.colors.neutral).length > 0) {
     figmaTokens.global.color.neutral = {};
     Object.entries(tokens.colors.neutral).forEach(([name, value]) => {
       figmaTokens.global.color.neutral[name] = {
@@ -1643,7 +1645,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.colors.accent).length > 0) {
+  if (tokens.colors && tokens.colors.accent && Object.keys(tokens.colors.accent).length > 0) {
     figmaTokens.global.color.accent = {};
     Object.entries(tokens.colors.accent).forEach(([name, value]) => {
       figmaTokens.global.color.accent[name] = {
@@ -1653,7 +1655,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.colors.semantic).length > 0) {
+  if (tokens.colors && tokens.colors.semantic && Object.keys(tokens.colors.semantic).length > 0) {
     figmaTokens.global.color.semantic = {};
     Object.entries(tokens.colors.semantic).forEach(([name, value]) => {
       figmaTokens.global.color.semantic[name] = {
@@ -1664,7 +1666,7 @@ function generateJSONTokens(tokens) {
   }
 
   // Convert spacing tokens to Figma format
-  if (Object.keys(tokens.spacing.scale).length > 0) {
+  if (tokens.spacing && tokens.spacing.scale && Object.keys(tokens.spacing.scale).length > 0) {
     figmaTokens.global.spacing = {};
     Object.entries(tokens.spacing.scale).forEach(([name, value]) => {
       figmaTokens.global.spacing[name] = {
@@ -1675,7 +1677,7 @@ function generateJSONTokens(tokens) {
   }
 
   // Convert border tokens to Figma format
-  if (Object.keys(tokens.borders.radius).length > 0) {
+  if (tokens.borders && tokens.borders.radius && Object.keys(tokens.borders.radius).length > 0) {
     figmaTokens.global.borderRadius = {};
     Object.entries(tokens.borders.radius).forEach(([name, value]) => {
       figmaTokens.global.borderRadius[name] = {
@@ -1685,7 +1687,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.borders.width).length > 0) {
+  if (tokens.borders && tokens.borders.width && Object.keys(tokens.borders.width).length > 0) {
     figmaTokens.global.borderWidth = {};
     Object.entries(tokens.borders.width).forEach(([name, value]) => {
       figmaTokens.global.borderWidth[name] = {
@@ -1695,7 +1697,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.borders.shadow).length > 0) {
+  if (tokens.borders && tokens.borders.shadow && Object.keys(tokens.borders.shadow).length > 0) {
     figmaTokens.global.shadow = {};
     Object.entries(tokens.borders.shadow).forEach(([name, value]) => {
       figmaTokens.global.shadow[name] = {
@@ -1706,7 +1708,7 @@ function generateJSONTokens(tokens) {
   }
 
   // Convert animation tokens to Figma format
-  if (Object.keys(tokens.animations.duration).length > 0) {
+  if (tokens.animations && tokens.animations.duration && Object.keys(tokens.animations.duration).length > 0) {
     figmaTokens.global.motion.duration = {};
     Object.entries(tokens.animations.duration).forEach(([name, value]) => {
       figmaTokens.global.motion.duration[name] = {
@@ -1716,7 +1718,7 @@ function generateJSONTokens(tokens) {
     });
   }
 
-  if (Object.keys(tokens.animations.timingFunction).length > 0) {
+  if (tokens.animations && tokens.animations.timingFunction && Object.keys(tokens.animations.timingFunction).length > 0) {
     figmaTokens.global.motion.easing = {};
     Object.entries(tokens.animations.timingFunction).forEach(([name, value]) => {
       figmaTokens.global.motion.easing[name] = {
@@ -1739,7 +1741,7 @@ function generateJSONTokens(tokens) {
 
 /**
  * Load extracted data from JSON files
- * @returns {Object} Extracted data
+ * @returns {object} Extracted data
  */
 function loadExtractedData() {
   const data = {};

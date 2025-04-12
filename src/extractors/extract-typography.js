@@ -1,9 +1,10 @@
-// @ts-check
-import { chromium } from '@playwright/test';
+
 import fs from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+
+import { chromium } from '@playwright/test';
+
 import { defaultConfig as cacheConfig, generateCacheKey, hasValidCache, getFromCache, saveToCache } from '../utils/extractor-cache.js';
 import { processInParallel, processPages, processPagesWithSharedBrowser } from '../utils/parallel-processor.js';
 import telemetryManager from '../utils/telemetry-manager.js';
@@ -147,16 +148,11 @@ export const defaultConfig = {
   generateVisualizations: true
 };
 
-// Add type definitions
-/** @typedef {Object} CSSRule */
-/** @typedef {Object} Browser */
-/** @typedef {{ url: string, title: string }} PageInfo */
-
 /**
  * Extract typography styles from a page
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Typography styles
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Typography styles
  */
 async function extractTypography(page, config = defaultConfig) {
   try {
@@ -269,8 +265,8 @@ async function extractTypography(page, config = defaultConfig) {
  * Extract typography from a single page
  * @param {import('playwright').Page} page - Playwright page object
  * @param {string} url - URL to navigate to (optional)
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Typography data
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Typography data
  */
 async function extractTypographyFromPage(page, url = null, config = defaultConfig) {
   // Initialize telemetry if enabled
@@ -506,7 +502,7 @@ async function extractTypographyFromPage(page, url = null, config = defaultConfi
 /**
  * Generate typography visualization
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} typographyData - Typography data
+ * @param {object} typographyData - Typography data
  * @param {string} screenshotsDir - Directory to save screenshots
  * @returns {Promise<void>}
  */
@@ -607,12 +603,12 @@ async function generateTypographyVisualization(page, typographyData, screenshots
 
 /**
  * Main function to extract typography from crawled pages
- * @param {Object} customConfig - Custom configuration
+ * @param {object} customConfig - Custom configuration
  * @param {import('playwright').Browser} browser - Browser instance (optional)
- * @param {Object} logger - Logger object (optional)
- * @returns {Promise<Object>} - Typography results
+ * @param {object} logger - Logger object (optional)
+ * @returns {Promise<object>} - Typography results
  */
-async function extractTypographyFromCrawledPages(customConfig = {}, browser = null, logger ) {
+async function extractTypographyFromCrawledPages(customConfig = {}, browser = null, logger) {
   // If logger is not provided, get a configured logger from config
   if (!logger) {
     const { getLogger } = await import('../utils/console-manager.js');

@@ -1,4 +1,4 @@
-// @ts-check
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -16,7 +16,7 @@ const TEMPLATE_CONFIG_PATH = path.join(__dirname, '../../src/templates/config/co
 export { DEFAULT_PATHS_PATH, DEFAULT_CONFIG_PATH, CONFIG_FOLDER };
 
 /**
- * @typedef {Object} Config
+ * @typedef {object} Config
  * @property {string} baseUrl
  * @property {string} inputFile
  * @property {string} outputFile
@@ -30,11 +30,11 @@ export { DEFAULT_PATHS_PATH, DEFAULT_CONFIG_PATH, CONFIG_FOLDER };
  * @property {string[]} ignoreExtensions
  * @property {string[]} ignorePatterns
  * @property {boolean} respectRobotsTxt
- * @property {Object} telemetry
+ * @property {object} telemetry
  */
 
 /**
- * @typedef {Object} TelemetryConfig
+ * @typedef {object} TelemetryConfig
  * @property {boolean} enabled
  * @property {string} outputDir
  * @property {boolean} logToConsole
@@ -100,7 +100,7 @@ const defaultConfig = {
 
   // Maximum number of pages to analyze (set to -1 for all pages)
   maxPages: 20,
-  
+
   // Timeout setting in milliseconds
   timeout: 30000,
 
@@ -113,17 +113,17 @@ const defaultConfig = {
 
   // Whether to generate visualizations
   generateVisualizations: true,
-  
+
   // Patterns and extensions to ignore
   ignoreExtensions: [
-    ".pdf", ".jpg", ".jpeg", ".png", ".gif", ".svg",
-    ".css", ".js", ".zip", ".tar", ".gz"
+    '.pdf', '.jpg', '.jpeg', '.png', '.gif', '.svg',
+    '.css', '.js', '.zip', '.tar', '.gz'
   ],
-  
+
   ignorePatterns: [
-    "\\?", "/admin/", "/user/", "/cart/", "/checkout/", "/search/"
+    '\\?', '/admin/', '/user/', '/cart/', '/checkout/', '/search/'
   ],
-  
+
   // Whether to respect robots.txt
   respectRobotsTxt: true,
 
@@ -176,17 +176,17 @@ export function configExists(configPath) {
  */
 export function readConfig(configPath = DEFAULT_CONFIG_PATH) {
   console.log('Reading config from:', configPath);
-  
+
   // Check for environment variable first - highest priority
   if (process.env.SITE_DOMAIN) {
     console.log('Found SITE_DOMAIN environment variable:', process.env.SITE_DOMAIN);
   }
-  
+
   if (!configPath || !configExists(configPath)) {
     console.warn(`Configuration file not found: ${configPath}`);
     console.warn('Using default configuration');
     const defaultConfig = getDefaultConfig();
-    
+
     // Validate and potentially fail if no baseUrl is provided
     try {
       return validateConfig(defaultConfig);
@@ -199,14 +199,14 @@ export function readConfig(configPath = DEFAULT_CONFIG_PATH) {
   try {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     console.log('Successfully loaded config with baseUrl:', config.baseUrl);
-    
+
     const mergedConfig = {
       ...getDefaultConfig(),
       ...config
     };
-    
+
     console.log('Merged config with default, final baseUrl:', mergedConfig.baseUrl);
-    
+
     // Validate and potentially fail if no baseUrl is provided
     try {
       return validateConfig(mergedConfig);
@@ -218,7 +218,7 @@ export function readConfig(configPath = DEFAULT_CONFIG_PATH) {
     console.warn(`Error reading configuration file: ${error.message}`);
     console.warn('Using default configuration');
     const defaultConfig = getDefaultConfig();
-    
+
     // Validate and potentially fail if no baseUrl is provided
     try {
       return validateConfig(defaultConfig);
@@ -267,13 +267,13 @@ export async function initConfig(configPath = DEFAULT_CONFIG_PATH) {
   }
 
   console.log('Configuration file does not exist. Creating default config at:', configPath);
-  
+
   // Check if we have a template config file to use
   let config;
-  
+
   // Use example config if available (most likely path)
   const exampleConfigPath = path.join(__dirname, '../../src/templates/example.config.json');
-  
+
   if (fs.existsSync(exampleConfigPath)) {
     console.log('Using example configuration from:', exampleConfigPath);
     try {
@@ -287,7 +287,7 @@ export async function initConfig(configPath = DEFAULT_CONFIG_PATH) {
       console.warn(`Error reading example config: ${error.message}`);
       config = getDefaultConfig();
     }
-  } 
+  }
   // Fall back to template config if available
   else if (fs.existsSync(TEMPLATE_CONFIG_PATH)) {
     console.log('Using template configuration from:', TEMPLATE_CONFIG_PATH);
@@ -305,14 +305,14 @@ export async function initConfig(configPath = DEFAULT_CONFIG_PATH) {
   } else {
     config = getDefaultConfig();
   }
-  
+
   await promptForConfig(config);
-  
+
   // Ensure the directory exists before saving (in case configPath has a different directory)
   if (!fs.existsSync(configDir)) {
     fs.mkdirSync(configDir, { recursive: true });
   }
-  
+
   saveConfig(configPath, config);
   return config;
 }
@@ -320,7 +320,7 @@ export async function initConfig(configPath = DEFAULT_CONFIG_PATH) {
 /**
  * Merge configuration with command line options
  * @param {Config} config - Base configuration
- * @param {Object} options - Command line options
+ * @param {object} options - Command line options
  * @returns {Config} Merged configuration
  */
 /**
@@ -336,31 +336,36 @@ export function validateConfig(config) {
       'No baseUrl specified. Please set SITE_DOMAIN environment variable, provide a URL in config.json, or use the --url command line option.'
     );
   }
-  
+
   // Check if baseUrl is a valid URL
   try {
     new URL(config.baseUrl);
   } catch (error) {
     throw new Error(`Invalid baseUrl: ${config.baseUrl}. Please provide a valid URL.`);
   }
-  
+
   return config;
 }
 
+/**
+ *
+ * @param config
+ * @param options
+ */
 export function mergeWithOptions(config, options) {
   // Create the merged config
   const merged = { ...config };
-  
+
   // Apply baseUrl from options (might be from options.url mapped to options.baseUrl)
   if (options.baseUrl) {
     merged.baseUrl = options.baseUrl;
   }
-  
+
   // Handle other options
   if (options.maxPages) merged.maxPages = options.maxPages;
   if (options.output) merged.outputDir = options.output;
   if (options.format) merged.format = options.format;
-  
+
   // Validate the configuration
   return validateConfig(merged);
 }
@@ -378,7 +383,7 @@ export function pathsFileExists(pathsPath = DEFAULT_PATHS_PATH) {
 /**
  * Read paths from a file
  * @param {string} [pathsPath] - Path to the paths file
- * @returns {Object|null} - The paths data or null if the file doesn't exist
+ * @returns {object | null} - The paths data or null if the file doesn't exist
  */
 export function readPaths(pathsPath = DEFAULT_PATHS_PATH) {
   if (!pathsFileExists(pathsPath)) {
@@ -396,7 +401,7 @@ export function readPaths(pathsPath = DEFAULT_PATHS_PATH) {
 
 /**
  * Save paths to a file
- * @param {Object} pathsData - Paths data to save
+ * @param {object} pathsData - Paths data to save
  * @param {string} [pathsPath] - Path to the paths file
  */
 export function savePaths(pathsData, pathsPath = DEFAULT_PATHS_PATH) {
@@ -445,5 +450,5 @@ export default {
   readPaths,
   savePaths,
   promptForPathsRegeneration,
-  DEFAULT_PATHS_PATH  // Export the path constant
+  DEFAULT_PATHS_PATH // Export the path constant
 };

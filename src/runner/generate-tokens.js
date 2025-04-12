@@ -1,17 +1,19 @@
 // src/runner/generate-tokens.js
 import path from 'path';
 import fs from 'fs';
+
 import * as telemetryManager from '../utils/telemetry-manager.js';
 import cacheManager from '../utils/cache-manager.js';
+
 import { generateDesignTokens } from './generator-exports.js';
 
 /**
  * Generate design tokens from extracted data
- * @param {Object} config - Application configuration
- * @param {Object} telemetry - Telemetry object
- * @param {Object} stepsToRun - Object containing steps to run
+ * @param {object} config - Application configuration
+ * @param {object} telemetry - Telemetry object
+ * @param {object} stepsToRun - Object containing steps to run
  * @param {boolean} runAll - Whether to run all steps
- * @returns {Promise<Object>} - Generated tokens
+ * @returns {Promise<object>} - Generated tokens
  */
 export default async function generateTokens(config, telemetry, stepsToRun, runAll) {
   if (!(runAll || stepsToRun.tokens)) {
@@ -19,9 +21,9 @@ export default async function generateTokens(config, telemetry, stepsToRun, runA
     console.log('Using existing design tokens.');
     return loadExistingTokens(config);
   }
-  
+
   console.log('\n=== Step 3: Generating design tokens ===');
-  
+
   try {
     const tokens = await executeTokenGeneration(config, telemetry);
     console.log('Design tokens generated successfully.');
@@ -35,9 +37,9 @@ export default async function generateTokens(config, telemetry, stepsToRun, runA
 
 /**
  * Execute token generation with or without telemetry
- * @param {Object} config - Application configuration
- * @param {Object} telemetry - Telemetry object
- * @returns {Promise<Object>} - Generated tokens
+ * @param {object} config - Application configuration
+ * @param {object} telemetry - Telemetry object
+ * @returns {Promise<object>} - Generated tokens
  */
 async function executeTokenGeneration(config, telemetry) {
   if (telemetry) {
@@ -55,11 +57,11 @@ async function executeTokenGeneration(config, telemetry) {
 /**
  * Handle token generation error
  * @param {Error} error - Error object
- * @param {Object} telemetry - Telemetry object
+ * @param {object} telemetry - Telemetry object
  */
 function handleTokenGenerationError(error, telemetry) {
   console.error('Error generating design tokens:', error.message);
-  
+
   if (telemetry) {
     telemetry.recordMetric('tokens-generation-error', 0, {
       error: error.message,
@@ -70,8 +72,8 @@ function handleTokenGenerationError(error, telemetry) {
 
 /**
  * Load existing tokens from file
- * @param {Object} config - Application configuration
- * @returns {Object} - Loaded tokens or empty token structure
+ * @param {object} config - Application configuration
+ * @returns {object} - Loaded tokens or empty token structure
  */
 function loadExistingTokens(config) {
   try {
@@ -82,13 +84,13 @@ function loadExistingTokens(config) {
   } catch (error) {
     console.error('Error loading existing tokens:', error.message);
   }
-  
+
   return createEmptyTokens();
 }
 
 /**
  * Create an empty token structure
- * @returns {Object} - Empty token structure
+ * @returns {object} - Empty token structure
  */
 function createEmptyTokens() {
   return {

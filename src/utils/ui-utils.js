@@ -9,10 +9,18 @@ const { table } = tablePkg;
 import inquirerPkg from 'inquirer';
 const inquirer = inquirerPkg;
 import figletPkg from 'figlet';
+
 const figlet = figletPkg;
 import colors from './colors.js';
 
+/**
+ *
+ */
 class UIUtils {
+  /**
+   *
+   * @param options
+   */
   constructor(options = {}) {
     this.options = {
       colors: true,
@@ -22,27 +30,51 @@ class UIUtils {
   }
 
   // Basic styling methods
+  /**
+   *
+   * @param message
+   */
   header(message) {
     console.log('\n' + (this.options.colors ? colors.blue(colors.bold(`=== ${message} ===`)) : `=== ${message} ===`));
   }
 
+  /**
+   *
+   * @param message
+   */
   success(message) {
     console.log(this.options.colors ? colors.green(`✓ ${message}`) : `✓ ${message}`);
   }
 
+  /**
+   *
+   * @param message
+   */
   warning(message) {
     console.log(this.options.colors ? colors.yellow(`⚠ ${message}`) : `⚠ ${message}`);
   }
 
+  /**
+   *
+   * @param message
+   */
   error(message) {
     console.log(this.options.colors ? colors.red(`✗ ${message}`) : `✗ ${message}`);
   }
 
+  /**
+   *
+   * @param message
+   */
   info(message) {
     console.log(this.options.colors ? colors.cyan(`ℹ ${message}`) : `ℹ ${message}`);
   }
 
   // Progress indicators
+  /**
+   *
+   * @param message
+   */
   createSpinner(message) {
     return ora({
       text: message,
@@ -51,6 +83,11 @@ class UIUtils {
     });
   }
 
+  /**
+   *
+   * @param total
+   * @param format
+   */
   createProgressBar(total, format) {
     return new createBar({
       format: format || 'Progress |{bar}| {percentage}% | {value}/{total}',
@@ -62,6 +99,11 @@ class UIUtils {
   }
 
   // Boxed content
+  /**
+   *
+   * @param message
+   * @param options
+   */
   box(message, options = {}) {
     const defaultOptions = {
       padding: 1,
@@ -76,6 +118,11 @@ class UIUtils {
   }
 
   // Table display
+  /**
+   *
+   * @param data
+   * @param options
+   */
   table(data, options = {}) {
     const defaultOptions = {
       border: {
@@ -101,6 +148,11 @@ class UIUtils {
   }
 
   // Interactive prompts
+  /**
+   *
+   * @param message
+   * @param defaultValue
+   */
   async confirm(message, defaultValue = true) {
     const { confirmed } = await inquirer.prompt([{
       type: 'confirm',
@@ -111,6 +163,11 @@ class UIUtils {
     return confirmed;
   }
 
+  /**
+   *
+   * @param message
+   * @param choices
+   */
   async select(message, choices) {
     const { selected } = await inquirer.prompt([{
       type: 'list',
@@ -121,6 +178,11 @@ class UIUtils {
     return selected;
   }
 
+  /**
+   *
+   * @param message
+   * @param choices
+   */
   async checkbox(message, choices) {
     const { selected } = await inquirer.prompt([{
       type: 'checkbox',
@@ -132,6 +194,9 @@ class UIUtils {
   }
 
   // ASCII art
+  /**
+   *
+   */
   logo() {
     console.log(
       colors.cyan(

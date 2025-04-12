@@ -1,15 +1,15 @@
-// @ts-check
+
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-import  { crawlConfig} from "../crawler/site-crawler.js"
-import  { defaultConfig as typographyConfig} from "../extractors/extract-typography.js"
-import  { defaultConfig as colorsConfig} from "../extractors/extract-colors.js"
-import  { defaultConfig as spacingConfig} from "../extractors/extract-spacing.js"
-import  { defaultConfig as bordersConfig} from "../extractors/extract-borders.js"
-import  { defaultConfig as animationsConfig} from "../extractors/extract-animations.js"
+import { localCrawlConfig } from '../crawler/site-crawler.js';
+import { defaultConfig as typographyConfig } from '../extractors/extract-typography.js';
+import { defaultConfig as colorsConfig } from '../extractors/extract-colors.js';
+import { defaultConfig as spacingConfig } from '../extractors/extract-spacing.js';
+import { defaultConfig as bordersConfig } from '../extractors/extract-borders.js';
+import { defaultConfig as animationsConfig } from '../extractors/extract-animations.js';
 
 
 /**
@@ -20,7 +20,7 @@ import  { defaultConfig as animationsConfig} from "../extractors/extract-animati
 const config = {
   // Input files
   inputFiles: {
-    crawlResults: crawlConfig.outputFile,
+    crawlResults: localCrawlConfig.outputFile,
     typography: typographyConfig.outputFile,
     colors: colorsConfig.outputFile,
     spacing: spacingConfig.outputFile,

@@ -1,4 +1,3 @@
-// @ts-check
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -32,7 +31,7 @@ function calculateFileHash(filePath) {
 /**
  * Get file stats
  * @param {string} filePath - Path to the file
- * @returns {Object|null} - File stats or null if file doesn't exist
+ * @returns {object | null} - File stats or null if file doesn't exist
  */
 function getFileStats(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -43,13 +42,13 @@ function getFileStats(filePath) {
   return {
     size: stats.size,
     mtime: stats.mtime.toISOString(),
-    isDirectory: stats.isDirectory()
+    isDirectory: stats.isDirectory(),
   };
 }
 
 /**
  * Get cache data
- * @returns {Object} - Cache data
+ * @returns {object} - Cache data
  */
 function getCacheData() {
   if (!fs.existsSync(CACHE_FILE)) {
@@ -59,7 +58,7 @@ function getCacheData() {
       maxPages: null,
       inputHashes: {},
       outputTimestamps: {},
-      fileStats: {}
+      fileStats: {},
     };
   }
 
@@ -73,14 +72,14 @@ function getCacheData() {
       maxPages: null,
       inputHashes: {},
       outputTimestamps: {},
-      fileStats: {}
+      fileStats: {},
     };
   }
 }
 
 /**
  * Save cache data
- * @param {Object} cacheData - Cache data to save
+ * @param {object} cacheData - Cache data to save
  */
 function saveCacheData(cacheData) {
   // Ensure directory exists
@@ -95,7 +94,7 @@ function saveCacheData(cacheData) {
 /**
  * Update cache after a step completes
  * @param {string} step - Step name
- * @param {Object} config - Configuration
+ * @param {object} config - Configuration
  */
 function updateCacheForStep(step, config) {
   const cache = getCacheData();
@@ -157,8 +156,8 @@ function updateCacheForStep(step, config) {
 /**
  * Check if a step needs to be run
  * @param {string} step - Step name
- * @param {Object} config - Configuration
- * @returns {Object} - Object with needsRun and reason properties
+ * @param {object} config - Configuration
+ * @returns {object} - Object with needsRun and reason properties
  */
 function checkIfStepNeedsRun(step, config) {
   const cache = getCacheData();
@@ -167,7 +166,7 @@ function checkIfStepNeedsRun(step, config) {
   if (!cache.lastRun || cache.targetUrl !== config.baseUrl) {
     return {
       needsRun: true,
-      reason: !cache.lastRun ? 'First run' : 'Target URL changed'
+      reason: !cache.lastRun ? 'First run' : 'Target URL changed',
     };
   }
 
@@ -179,7 +178,7 @@ function checkIfStepNeedsRun(step, config) {
     if (!fs.existsSync(pathsFile)) {
       return {
         needsRun: true,
-        reason: 'paths.json does not exist'
+        reason: 'paths.json does not exist',
       };
     }
 
@@ -209,7 +208,7 @@ function checkIfStepNeedsRun(step, config) {
 
       return {
         needsRun: true,
-        reason: changeDetails
+        reason: changeDetails,
       };
     }
 
@@ -217,7 +216,7 @@ function checkIfStepNeedsRun(step, config) {
     if (cache.maxPages !== config.maxPages) {
       return {
         needsRun: true,
-        reason: `Max pages changed from ${cache.maxPages} to ${config.maxPages}`
+        reason: `Max pages changed from ${cache.maxPages} to ${config.maxPages}`,
       };
     }
 
@@ -226,14 +225,14 @@ function checkIfStepNeedsRun(step, config) {
     if (!fs.existsSync(crawlResultsFile)) {
       return {
         needsRun: true,
-        reason: 'Crawl results do not exist'
+        reason: 'Crawl results do not exist',
       };
     }
 
     // Otherwise, don't need to run
     return {
       needsRun: false,
-      reason: 'No changes detected in paths.json or configuration'
+      reason: 'No changes detected in paths.json or configuration',
     };
   } else if (['typography', 'colors', 'spacing', 'borders', 'animations'].includes(step)) {
     // If crawl results don't exist, need to run crawl first
@@ -241,18 +240,18 @@ function checkIfStepNeedsRun(step, config) {
     if (!fs.existsSync(crawlResultsFile)) {
       return {
         needsRun: true,
-        reason: 'Crawl results do not exist'
+        reason: 'Crawl results do not exist',
       };
     }
 
     // If crawl is newer than this analysis, need to run
-    const crawlTimestamp = cache.outputTimestamps['crawl'];
+    const crawlTimestamp = cache.outputTimestamps.crawl;
     const analysisTimestamp = cache.outputTimestamps[step];
 
     if (!analysisTimestamp || (crawlTimestamp && new Date(crawlTimestamp) > new Date(analysisTimestamp))) {
       return {
         needsRun: true,
-        reason: 'Crawl results are newer than analysis'
+        reason: 'Crawl results are newer than analysis',
       };
     }
 
@@ -261,29 +260,29 @@ function checkIfStepNeedsRun(step, config) {
     if (!fs.existsSync(analysisFile)) {
       return {
         needsRun: true,
-        reason: `${step} analysis file does not exist`
+        reason: `${step} analysis file does not exist`,
       };
     }
 
     // Check if analysis file has been modified using hash comparison
     const currentHash = calculateFileHash(analysisFile);
     const cachedHash = cache.inputHashes[`${step}-analysis.json`];
-    
+
     if (cachedHash && currentHash !== cachedHash) {
       return {
         needsRun: true,
-        reason: `${step} analysis file has been modified (content changed)`
+        reason: `${step} analysis file has been modified (content changed)`,
       };
     }
 
     // Otherwise, don't need to run
     return {
       needsRun: false,
-      reason: `No changes detected in ${step} analysis dependencies`
+      reason: `No changes detected in ${step} analysis dependencies`,
     };
   } else if (step === 'tokens') {
     // Check if any analysis files are newer than tokens
-    const tokensTimestamp = cache.outputTimestamps['tokens'];
+    const tokensTimestamp = cache.outputTimestamps.tokens;
 
     for (const analysisStep of ['typography', 'colors', 'spacing', 'borders', 'animations']) {
       const analysisTimestamp = cache.outputTimestamps[analysisStep];
@@ -291,7 +290,7 @@ function checkIfStepNeedsRun(step, config) {
       if (analysisTimestamp && (!tokensTimestamp || new Date(analysisTimestamp) > new Date(tokensTimestamp))) {
         return {
           needsRun: true,
-          reason: `${analysisStep} analysis is newer than tokens`
+          reason: `${analysisStep} analysis is newer than tokens`,
         };
       }
     }
@@ -301,35 +300,35 @@ function checkIfStepNeedsRun(step, config) {
     if (!fs.existsSync(tokensFile)) {
       return {
         needsRun: true,
-        reason: 'Tokens file does not exist'
+        reason: 'Tokens file does not exist',
       };
     }
 
     // Check if tokens file has been modified using hash comparison
     const currentHash = calculateFileHash(tokensFile);
     const cachedHash = cache.inputHashes['tokens.json'];
-    
+
     if (cachedHash && currentHash !== cachedHash) {
       return {
         needsRun: true,
-        reason: 'Tokens file has been modified (content changed)'
+        reason: 'Tokens file has been modified (content changed)',
       };
     }
-    
+
     // Otherwise, don't need to run
     return {
       needsRun: false,
-      reason: 'No changes detected in token dependencies'
+      reason: 'No changes detected in token dependencies',
     };
   } else if (step === 'reports') {
     // Check if tokens are newer than reports
-    const tokensTimestamp = cache.outputTimestamps['tokens'];
-    const reportsTimestamp = cache.outputTimestamps['reports'];
+    const tokensTimestamp = cache.outputTimestamps.tokens;
+    const reportsTimestamp = cache.outputTimestamps.reports;
 
     if (tokensTimestamp && (!reportsTimestamp || new Date(tokensTimestamp) > new Date(reportsTimestamp))) {
       return {
         needsRun: true,
-        reason: 'Tokens are newer than reports'
+        reason: 'Tokens are newer than reports',
       };
     }
 
@@ -338,39 +337,39 @@ function checkIfStepNeedsRun(step, config) {
     if (!fs.existsSync(reportFile)) {
       return {
         needsRun: true,
-        reason: 'Report file does not exist'
+        reason: 'Report file does not exist',
       };
     }
 
     // Check if report file has been modified using hash comparison
     const currentHash = calculateFileHash(reportFile);
     const cachedHash = cache.inputHashes['design-system-report.html'];
-    
+
     if (cachedHash && currentHash !== cachedHash) {
       return {
         needsRun: true,
-        reason: 'Report file has been modified (content changed)'
+        reason: 'Report file has been modified (content changed)',
       };
     }
-    
+
     // Otherwise, don't need to run
     return {
       needsRun: false,
-      reason: 'No changes detected in report dependencies'
+      reason: 'No changes detected in report dependencies',
     };
   }
 
   // Default: run the step
   return {
     needsRun: true,
-    reason: 'Unknown step or no cache information available'
+    reason: 'Unknown step or no cache information available',
   };
 }
 
 /**
  * Check all steps and determine what needs to be run
- * @param {Object} config - Configuration
- * @returns {Object} - Object with steps that need to be run and reasons
+ * @param {object} config - Configuration
+ * @returns {object} - Object with steps that need to be run and reasons
  */
 function analyzeStepsToRun(config) {
   const steps = ['crawl', 'typography', 'colors', 'spacing', 'borders', 'animations', 'tokens', 'reports'];
@@ -382,7 +381,7 @@ function analyzeStepsToRun(config) {
     steps.forEach(step => {
       results[step] = {
         needsRun: true,
-        reason: 'First run - no cache file exists'
+        reason: 'First run - no cache file exists',
       };
     });
     return results;
@@ -398,9 +397,9 @@ function analyzeStepsToRun(config) {
 
 /**
  * Create an interactive prompt for the user
- * @param {Object} stepAnalysis - Analysis of steps to run
- * @param {Object} config - Configuration
- * @returns {Promise<Object>} - Object with steps to run
+ * @param {object} stepAnalysis - Analysis of steps to run
+ * @param {object} config - Configuration
+ * @returns {Promise<object>} - Object with steps to run
  */
 async function promptUser(stepAnalysis, config) {
   const cache = getCacheData();
@@ -457,17 +456,17 @@ async function promptUser(stepAnalysis, config) {
   // Create readline interface
   const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
   });
 
   // Prompt for how to proceed
   const answer = await new Promise(resolve => {
     rl.question('\nHow would you like to proceed?\n' +
-                '1. Run all necessary steps (recommended)\n' +
-                '2. Run selected steps only\n' +
-                '3. Skip all steps and use existing results\n' +
-                '4. Force run everything (ignore cache)\n\n' +
-                'Enter your choice (1-4): ', resolve);
+      '1. Run all necessary steps (recommended)\n' +
+      '2. Run selected steps only\n' +
+      '3. Skip all steps and use existing results\n' +
+      '4. Force run everything (ignore cache)\n\n' +
+      'Enter your choice (1-4): ', resolve);
   });
 
   const choice = parseInt(answer.trim());
@@ -477,38 +476,38 @@ async function promptUser(stepAnalysis, config) {
     rl.close();
     return {
       runAll: false,
-      steps: Object.fromEntries(stepsToRun.map(({ step }) => [step, true]))
+      steps: Object.fromEntries(stepsToRun.map(({ step }) => [step, true])),
     };
   } else if (choice === 2) {
     // Run selected steps
     const stepsAnswer = await new Promise(resolve => {
       rl.question('\nSelect which steps to run:\n' +
-                  stepsToRun.map(({ step, reason }, index) => {
-                    let stepName = step.toUpperCase();
-                    let description = '';
+        stepsToRun.map(({ step, reason }, index) => {
+          let stepName = step.toUpperCase();
+          let description = '';
 
-                    switch (step) {
-                      case 'crawl':
-                        description = 'Site crawling';
-                        break;
-                      case 'typography':
-                      case 'colors':
-                      case 'spacing':
-                      case 'borders':
-                      case 'animations':
-                        description = `${step.charAt(0).toUpperCase() + step.slice(1)} extraction`;
-                        break;
-                      case 'tokens':
-                        description = 'Design tokens generation';
-                        break;
-                      case 'reports':
-                        description = 'HTML reports generation';
-                        break;
-                    }
+          switch (step) {
+            case 'crawl':
+              description = 'Site crawling';
+              break;
+            case 'typography':
+            case 'colors':
+            case 'spacing':
+            case 'borders':
+            case 'animations':
+              description = `${step.charAt(0).toUpperCase() + step.slice(1)} extraction`;
+              break;
+            case 'tokens':
+              description = 'Design tokens generation';
+              break;
+            case 'reports':
+              description = 'HTML reports generation';
+              break;
+          }
 
-                    return `${index + 1}. [${stepName}] ${description}`;
-                  }).join('\n') +
-                  '\n\nEnter numbers separated by commas (e.g., "1,3"): ', resolve);
+          return `${index + 1}. [${stepName}] ${description}`;
+        }).join('\n') +
+        '\n\nEnter numbers separated by commas (e.g., "1,3"): ', resolve);
     });
 
     rl.close();
@@ -524,8 +523,8 @@ async function promptUser(stepAnalysis, config) {
       steps: Object.fromEntries(
         stepsToRun
           .filter((_, index) => selectedIndices.includes(index))
-          .map(({ step }) => [step, true])
-      )
+          .map(({ step }) => [step, true]),
+      ),
     };
   } else if (choice === 3) {
     // Skip all steps
@@ -541,7 +540,7 @@ async function promptUser(stepAnalysis, config) {
     rl.close();
     return {
       runAll: false,
-      steps: Object.fromEntries(stepsToRun.map(({ step }) => [step, true]))
+      steps: Object.fromEntries(stepsToRun.map(({ step }) => [step, true])),
     };
   }
 }
@@ -555,5 +554,5 @@ export default {
   updateCacheForStep,
   checkIfStepNeedsRun,
   analyzeStepsToRun,
-  promptUser
+  promptUser,
 };

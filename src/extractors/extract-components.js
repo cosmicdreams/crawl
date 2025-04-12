@@ -7,10 +7,12 @@
 
 import fs from 'fs';
 import path from 'path';
-import { chromium } from '@playwright/test';
-import telemetryManager from '../utils/telemetry-manager.js';
 import { fileURLToPath } from 'url';
+
+import { chromium } from '@playwright/test';
 import handlebars from 'handlebars';
+
+import telemetryManager from '../utils/telemetry-manager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -95,7 +97,7 @@ const defaultConfig = {
 
   // Report file for the component library
   reportFile: path.join(__dirname, '../../results/reports/component-library.html'),
-  
+
   // Filtered component list (when set, only extract components that match these machine names)
   FilteredComponentList: [],
 
@@ -142,7 +144,7 @@ const defaultConfig = {
 /**
  * Extract components from a page
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} config - Configuration object
+ * @param {object} config - Configuration object
  * @returns {Promise<Array>} - Array of components
  */
 async function extractComponents(page, config) {
@@ -190,23 +192,23 @@ async function extractComponents(page, config) {
     // Helper function to check if an element matches the filtered component list
     function matchesFilteredList(element, type, filterList) {
       if (!useFilter) return true;
-      
+
       // Check type against filter list
       if (filterList.some(filter => type.toLowerCase().includes(filter.toLowerCase()))) {
         return true;
       }
-      
+
       // Check class names against filter list
-      if (element.classList && Array.from(element.classList).some(cls => 
+      if (element.classList && Array.from(element.classList).some(cls =>
         filterList.some(filter => cls.toLowerCase().includes(filter.toLowerCase()))
       )) {
         return true;
       }
-      
+
       // Check comments around the element for component identifiers
       const prevNode = element.previousSibling;
       const nextNode = element.nextSibling;
-      
+
       // Check if previous node is a comment containing filter terms
       if (prevNode && prevNode.nodeType === 8) { // 8 is comment node
         const commentText = prevNode.textContent || '';
@@ -214,7 +216,7 @@ async function extractComponents(page, config) {
           return true;
         }
       }
-      
+
       // Check if next node is a comment containing filter terms
       if (nextNode && nextNode.nodeType === 8) {
         const commentText = nextNode.textContent || '';
@@ -222,15 +224,15 @@ async function extractComponents(page, config) {
           return true;
         }
       }
-      
+
       // Check data attributes for filter terms
       for (const attr of element.attributes) {
-        if (attr.name.startsWith('data-') && 
+        if (attr.name.startsWith('data-') &&
             filterList.some(filter => attr.value.toLowerCase().includes(filter.toLowerCase()))) {
           return true;
         }
       }
-      
+
       return false;
     }
 
@@ -296,8 +298,8 @@ async function extractComponents(page, config) {
     }
 
     return components;
-  }, { 
-    selectors: COMPONENT_SELECTORS, 
+  }, {
+    selectors: COMPONENT_SELECTORS,
     prospectiveNames: prospectiveComponentMachineNames,
     useFilter,
     filterList
@@ -308,8 +310,8 @@ async function extractComponents(page, config) {
  * Extract components from a single page
  * @param {import('@playwright/test').Page} page - Playwright page object
  * @param {string} [url] - URL of the page
- * @param {Object} [config] - Configuration options
- * @returns {Promise<Object>} Extracted components
+ * @param {object} [config] - Configuration options
+ * @returns {Promise<object>} Extracted components
  */
 export async function extractComponentsFromPage(page, url = null, config = defaultConfig) {
   // Initialize telemetry if enabled
@@ -406,10 +408,10 @@ export async function extractComponentsFromPage(page, url = null, config = defau
 
 /**
  * Extract components from crawled pages
- * @param {Object} [customConfig] - Custom configuration
+ * @param {object} [customConfig] - Custom configuration
  * @param {import('@playwright/test').Browser} [browser] - Playwright browser instance
- * @param {Object} [logger] - Logger object
- * @returns {Promise<Object>} Extracted components
+ * @param {object} [logger] - Logger object
+ * @returns {Promise<object>} Extracted components
  */
 export async function extractComponentsFromCrawledPages(customConfig = {}, browser = null, logger = null) {
   // If logger is not provided, get a configured logger from config
@@ -667,7 +669,7 @@ export async function extractComponentsFromCrawledPages(customConfig = {}, brows
 /**
  * Generate a component library from extracted components
  * @param {Array} components - Array of components from different pages
- * @returns {Object} - Component library
+ * @returns {object} - Component library
  */
 function generateComponentLibrary(components) {
   // Initialize component library
@@ -715,7 +717,7 @@ function generateComponentLibrary(components) {
 
 /**
  * Save component library to a file
- * @param {Object} library - Component library
+ * @param {object} library - Component library
  * @param {string} outputFile - Output file path
  */
 function saveComponentLibrary(library, outputFile) {
@@ -724,14 +726,14 @@ function saveComponentLibrary(library, outputFile) {
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
-  
+
   fs.writeFileSync(outputFile, JSON.stringify(library, null, 2));
 }
 
 /**
  * Generate a recommended component structure
- * @param {Object} component - Component object
- * @returns {Object} - Recommended structure
+ * @param {object} component - Component object
+ * @returns {object} - Recommended structure
  */
 function generateRecommendedStructure(component) {
   // This is a simple heuristic and could be improved with more sophisticated analysis
@@ -761,7 +763,7 @@ function generateRecommendedStructure(component) {
 
 /**
  * Generate CSS for a component
- * @param {Object} component - Component object
+ * @param {object} component - Component object
  * @returns {string} - CSS code
  */
 function generateCssForComponent(component) {
@@ -786,7 +788,7 @@ function generateCssForComponent(component) {
 
 /**
  * Generate JavaScript for a component
- * @param {Object} component - Component object
+ * @param {object} component - Component object
  * @returns {string} - JavaScript code
  */
 function generateJsForComponent(component) {
@@ -814,7 +816,7 @@ function generateJsForComponent(component) {
 
 /**
  * Generate a component report
- * @param {Object} library - Component library
+ * @param {object} library - Component library
  * @param {string} outputFile - Output file path
  */
 function generateComponentReport(library, outputFile) {

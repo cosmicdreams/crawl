@@ -1,6 +1,6 @@
 /**
  * Console Manager
- * 
+ *
  * An enhanced console manager with powerful features:
  * - Enabling/disabling logging based on debug mode
  * - Log level filtering (error, warn, info, debug, verbose)
@@ -9,18 +9,19 @@
  * - Prefix support for context in logs
  */
 
-import colors from './colors.js';
 import oraPkg from 'ora';
+
+import colors from './colors.js';
 const ora = oraPkg;
 
 // Log levels with numeric values for comparison
 const LOG_LEVELS = {
-  SILENT: 0,   // No output
-  ERROR: 1,    // Only errors
-  WARN: 2,     // Errors and warnings
-  INFO: 3,     // Standard information (default)
-  DEBUG: 4,    // Detailed debugging information
-  VERBOSE: 5   // All possible output
+  SILENT: 0, // No output
+  ERROR: 1, // Only errors
+  WARN: 2, // Errors and warnings
+  INFO: 3, // Standard information (default)
+  DEBUG: 4, // Detailed debugging information
+  VERBOSE: 5 // All possible output
 };
 
 // Symbol definitions for spinner persistence
@@ -33,40 +34,47 @@ const SYMBOLS = {
   VERBOSE: '◦',
 };
 
+/**
+ *
+ */
 class ConsoleManager {
+  /**
+   *
+   * @param options
+   */
   constructor(options = {}) {
     this.options = {
       // Whether to show colors in output
       colors: true,
-      
+
       // Whether debug mode is enabled
       debug: process.env.NODE_ENV !== 'production',
-      
+
       // Current log level
       logLevel: LOG_LEVELS.INFO,
-      
+
       // Whether to include timestamps in logs
       timestamps: false,
-      
+
       // Optional prefix for all log messages
       prefix: '',
-      
+
       // Whether to forward logs to the original console
       forwardToConsole: false,
-      
+
       // Whether to use spinners for interactive output
       useSpinners: process.stdout.isTTY,
-      
+
       // Override with custom options
       ...options
     };
-    
+
     // Store reference to the original console
     this.originalConsole = console;
-    
+
     // Active spinner instance
     this.activeSpinner = null;
-    
+
     // Create public methods that match the standard console API
     this.log = this._createLogMethod('log', LOG_LEVELS.INFO, colors.white, SYMBOLS.INFO);
     this.info = this._createLogMethod('info', LOG_LEVELS.INFO, colors.cyan, SYMBOLS.INFO);
@@ -75,7 +83,7 @@ class ConsoleManager {
     this.error = this._createLogMethod('error', LOG_LEVELS.ERROR, colors.red, SYMBOLS.ERROR);
     this.verbose = this._createLogMethod('verbose', LOG_LEVELS.VERBOSE, colors.gray, SYMBOLS.VERBOSE);
     this.success = this._createLogMethod('log', LOG_LEVELS.INFO, colors.green, SYMBOLS.SUCCESS);
-    
+
     // Methods that should always pass through
     this.assert = this.originalConsole.assert.bind(this.originalConsole);
     this.clear = this.originalConsole.clear.bind(this.originalConsole);
@@ -87,7 +95,7 @@ class ConsoleManager {
     this.trace = this._createLogMethod('trace', LOG_LEVELS.DEBUG, colors.magenta, SYMBOLS.DEBUG);
     this.dir = this._createLogMethod('dir', LOG_LEVELS.DEBUG, colors.blue, SYMBOLS.DEBUG);
   }
-  
+
   /**
    * Create a spinner with the current message
    * @param {string} text - The message to display
@@ -97,14 +105,14 @@ class ConsoleManager {
   spinner(text, options = {}) {
     // Clear existing spinner if any
     this.clearSpinner();
-    
+
     // Only create spinners when they're enabled and in TTY
     if (!this.options.useSpinners || !process.stdout.isTTY) {
       // In non-TTY environments, just log the start message in debug mode
       if (this.options.debug) {
         this.info(text);
       }
-      
+
       // Return a dummy spinner
       return {
         succeed: (msg) => this.success(msg || text),
@@ -116,7 +124,7 @@ class ConsoleManager {
         text
       };
     }
-    
+
     // Create spinner with Ora
     this.activeSpinner = ora({
       text: this._formatMessage(text),
@@ -124,10 +132,10 @@ class ConsoleManager {
       color: 'cyan',
       ...options
     }).start();
-    
+
     return this.activeSpinner;
   }
-  
+
   /**
    * Clear the active spinner if one exists
    */
@@ -137,17 +145,17 @@ class ConsoleManager {
       this.activeSpinner = null;
     }
   }
-  
+
   /**
    * Update the logger options
-   * @param {Object} newOptions - New options to apply
+   * @param {object} newOptions - New options to apply
    */
   configure(newOptions = {}) {
     this.options = {
       ...this.options,
       ...newOptions
     };
-    
+
     // Handle string log levels
     if (typeof this.options.logLevel === 'string') {
       const level = this.options.logLevel.toUpperCase();
@@ -159,7 +167,7 @@ class ConsoleManager {
       }
     }
   }
-  
+
   /**
    * Set debug mode on or off
    * @param {boolean} isEnabled - Whether debug mode is enabled
@@ -167,7 +175,7 @@ class ConsoleManager {
   setDebug(isEnabled) {
     this.options.debug = !!isEnabled;
   }
-  
+
   /**
    * Set the log level
    * @param {string|number} level - Log level name or numeric value
@@ -188,7 +196,7 @@ class ConsoleManager {
       }
     }
   }
-  
+
   /**
    * Set a prefix for all log messages
    * @param {string} prefix - Prefix to add to all messages
@@ -196,23 +204,23 @@ class ConsoleManager {
   setPrefix(prefix) {
     this.options.prefix = prefix;
   }
-  
+
   /**
    * Create a child logger with a specific prefix
    * @param {string} prefix - Prefix for the child logger
    * @returns {ConsoleManager} A new console manager with the specified prefix
    */
   createPrefixedLogger(prefix) {
-    const childPrefix = this.options.prefix 
+    const childPrefix = this.options.prefix
       ? `${this.options.prefix}:${prefix}`
       : prefix;
-      
+
     return new ConsoleManager({
       ...this.options,
       prefix: childPrefix
     });
   }
-  
+
   /**
    * Format a message with timestamp and prefix
    * @param {string} message - The message to format
@@ -224,36 +232,40 @@ class ConsoleManager {
     if (typeof message !== 'string') {
       return message;
     }
-    
+
     let formattedMessage = message;
-    
+
     // Add timestamp if enabled
     if (this.options.timestamps) {
       const timestamp = new Date().toISOString();
-      const timestampStr = this.options.colors 
+      const timestampStr = this.options.colors
         ? colors.gray(`[${timestamp}]`)
         : `[${timestamp}]`;
       formattedMessage = `${timestampStr} ${formattedMessage}`;
     }
-    
+
     // Add prefix if set
     if (this.options.prefix) {
-      const prefixStr = this.options.colors 
+      const prefixStr = this.options.colors
         ? colors.cyan(`[${this.options.prefix}]`)
         : `[${this.options.prefix}]`;
       formattedMessage = `${prefixStr} ${formattedMessage}`;
     }
-    
+
     // Apply colors if enabled and color function provided
     if (this.options.colors && colorFn) {
       formattedMessage = colorFn(formattedMessage);
     }
-    
+
     return formattedMessage;
   }
-  
+
   /**
    * Factory method to create logging functions
+   * @param method
+   * @param level
+   * @param colorFn
+   * @param symbol
    * @private
    */
   _createLogMethod(method, level, colorFn = colors.white, symbol) {
@@ -261,20 +273,20 @@ class ConsoleManager {
       // Get the message (first argument)
       const message = args[0];
       const restArgs = args.slice(1);
-      
+
       // Skip if:
       // 1. Debug mode is off and this isn't an error/warning message, or
       // 2. The current log level is lower than this message's level
       const isErrorOrWarning = level <= LOG_LEVELS.WARN;
       if (
-        (!this.options.debug && level > LOG_LEVELS.WARN) || 
+        (!this.options.debug && level > LOG_LEVELS.WARN) ||
         (this.options.logLevel < level)
       ) {
         // Special case: always output errors/warnings even in non-debug mode
         if (isErrorOrWarning && typeof message === 'string') {
           const formattedMessage = this._formatMessage(message, colorFn);
           this.originalConsole.error(formattedMessage, ...restArgs);
-          
+
           // If we have an active spinner, update it to show the error/warning
           if (this.activeSpinner) {
             if (level === LOG_LEVELS.ERROR) {
@@ -286,12 +298,12 @@ class ConsoleManager {
         }
         return;
       }
-      
+
       // Format the message
-      const formattedMessage = typeof message === 'string' 
+      const formattedMessage = typeof message === 'string'
         ? this._formatMessage(message, colorFn)
         : message;
-      
+
       // If we have an active spinner, use stopAndPersist in debug mode to preserve output
       if (this.activeSpinner && this.options.debug) {
         this.activeSpinner.stopAndPersist({
@@ -312,16 +324,15 @@ class ConsoleManager {
         }).start();
       } else if (this.activeSpinner) {
         // No active spinner, just log normally
-        //this.originalConsole[method](formattedMessage, ...restArgs);
+        // this.originalConsole[method](formattedMessage, ...restArgs);
         this.activeSpinner.text = formattedMessage;
-      }
-      else if (this.options.forwardToConsole) {
+      } else if (this.options.forwardToConsole) {
         // Forward to original console if enabled
         this.originalConsole[method](message, ...restArgs);
       }
     };
   }
-  
+
   /**
    * Create a progress task with spinner
    * @param {string} initialMessage - Initial message to display
@@ -330,7 +341,7 @@ class ConsoleManager {
    */
   task(initialMessage, options = {}) {
     const spinner = this.spinner(initialMessage, options);
-    
+
     // Return a task object with chainable methods
     return {
       // Update the task message
@@ -340,7 +351,7 @@ class ConsoleManager {
         }
         return this;
       },
-      
+
       // Complete the task successfully
       complete: (message) => {
         if (spinner) {
@@ -348,7 +359,7 @@ class ConsoleManager {
         }
         return this;
       },
-      
+
       // Mark the task as failed
       fail: (message) => {
         if (spinner) {
@@ -356,7 +367,7 @@ class ConsoleManager {
         }
         return this;
       },
-      
+
       // Get the raw spinner object
       spinner: () => spinner
     };
@@ -368,8 +379,8 @@ const defaultLogger = new ConsoleManager();
 
 /**
  * Get a configured logger from application config
- * @param {Object} config - Application configuration
- * @param {string} [section=''] - Optional section name for prefixed logging
+ * @param {object} config - Application configuration
+ * @param {string} [section] - Optional section name for prefixed logging
  * @returns {ConsoleManager} - Configured console manager
  */
 function getLogger(config, section = '') {
@@ -377,7 +388,7 @@ function getLogger(config, section = '') {
   if (!config || !config.logging) {
     return section ? defaultLogger.createPrefixedLogger(section) : defaultLogger;
   }
-  
+
   // Initialize with logging config
   const logger = new ConsoleManager({
     debug: config.logging.debug !== undefined ? config.logging.debug : true,
@@ -386,16 +397,16 @@ function getLogger(config, section = '') {
     timestamps: config.logging.timestamps || false,
     prefix: config.logging.prefix || ''
   });
-  
+
   // Add section to prefix if provided
   if (section) {
     const currentPrefix = logger.options.prefix;
-    const newPrefix = currentPrefix 
+    const newPrefix = currentPrefix
       ? `${currentPrefix}:${section}`
       : section;
     logger.setPrefix(newPrefix);
   }
-  
+
   return logger;
 }
 

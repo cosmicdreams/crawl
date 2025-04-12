@@ -27,8 +27,8 @@ const defaultConfig = {
 /**
  * Generate a cache key from input parameters
  * @param {string} type - Type of data being cached (e.g., 'typography', 'colors')
- * @param {string} [url='default'] - URL of the page being processed, defaults to 'default' if not provided
- * @param {Object} config - Configuration used for extraction
+ * @param {string} [url] - URL of the page being processed, defaults to 'default' if not provided
+ * @param {object} config - Configuration used for extraction
  * @returns {string} - Cache key
  */
 function generateCacheKey(type, url = 'default', config = {}) {
@@ -57,7 +57,7 @@ function generateCacheKey(type, url = 'default', config = {}) {
 /**
  * Get the path to a cache file
  * @param {string} cacheKey - Cache key
- * @param {Object} config - Cache configuration
+ * @param {object} config - Cache configuration
  * @returns {string} - Path to cache file
  */
 function getCacheFilePath(cacheKey, config = defaultConfig) {
@@ -78,7 +78,7 @@ function getCacheFilePath(cacheKey, config = defaultConfig) {
 /**
  * Check if a valid cache entry exists
  * @param {string} cacheKey - Cache key
- * @param {Object} config - Cache configuration
+ * @param {object} config - Cache configuration
  * @returns {boolean} - Whether a valid cache entry exists
  */
 function hasValidCache(cacheKey, config = defaultConfig) {
@@ -133,8 +133,8 @@ function hasValidCache(cacheKey, config = defaultConfig) {
 /**
  * Get data from cache
  * @param {string} cacheKey - Cache key
- * @param {Object} config - Cache configuration
- * @returns {Object|null} - Cached data or null if no valid cache exists
+ * @param {object} config - Cache configuration
+ * @returns {object | null} - Cached data or null if no valid cache exists
  */
 function getFromCache(cacheKey, config = defaultConfig) {
   // Check if valid cache exists
@@ -158,9 +158,9 @@ function getFromCache(cacheKey, config = defaultConfig) {
 /**
  * Save data to cache
  * @param {string} cacheKey - Cache key
- * @param {Object} data - Data to cache
- * @param {Object} metadata - Additional metadata
- * @param {Object} config - Cache configuration
+ * @param {object} data - Data to cache
+ * @param {object} metadata - Additional metadata
+ * @param {object} config - Cache configuration
  * @returns {boolean} - Whether the data was successfully cached
  */
 function saveToCache(cacheKey, data, metadata = {}, config = defaultConfig) {
@@ -192,7 +192,7 @@ function saveToCache(cacheKey, data, metadata = {}, config = defaultConfig) {
 
 /**
  * Clear all cache entries
- * @param {Object} config - Cache configuration
+ * @param {object} config - Cache configuration
  * @returns {boolean} - Whether the cache was successfully cleared
  */
 function clearCache(config = defaultConfig) {
@@ -224,7 +224,7 @@ function clearCache(config = defaultConfig) {
 /**
  * Invalidate a specific cache entry
  * @param {string} cacheKey - Cache key
- * @param {Object} config - Cache configuration
+ * @param {object} config - Cache configuration
  * @returns {boolean} - Whether the cache entry was successfully invalidated
  */
 function invalidateCache(cacheKey, config = defaultConfig) {
@@ -246,8 +246,8 @@ function invalidateCache(cacheKey, config = defaultConfig) {
 
 /**
  * Get cache statistics
- * @param {Object} config - Cache configuration
- * @returns {Object} - Cache statistics
+ * @param {object} config - Cache configuration
+ * @returns {object} - Cache statistics
  */
 function getCacheStats(config = defaultConfig) {
   try {
@@ -316,10 +316,10 @@ function getCacheStats(config = defaultConfig) {
  * Wrap an async function with caching
  * @param {Function} fn - Function to wrap
  * @param {string} type - Type of data being cached
- * @param {string} [url='default'] - URL of the page being processed, defaults to 'default' if not provided
- * @param {Object} config - Extraction configuration
- * @param {Object} cacheConfig - Cache configuration
- * @returns {Promise<Object>} - Function result (from cache or fresh)
+ * @param {string} [url] - URL of the page being processed, defaults to 'default' if not provided
+ * @param {object} config - Extraction configuration
+ * @param {object} cacheConfig - Cache configuration
+ * @returns {Promise<object>} - Function result (from cache or fresh)
  */
 async function withCache(fn, type, url = 'default', config = {}, cacheConfig = defaultConfig) {
   if (!fn || typeof fn !== 'function') {

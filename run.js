@@ -1,9 +1,9 @@
 // run.js - Main entry point for Design Token Crawler
 import fs from 'fs';
-import path from 'path';
-import { program } from 'commander';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+
+import { program } from 'commander';
 
 // Get the current file's directory (ES modules don't have __dirname)
 const __filename = fileURLToPath(import.meta.url);
@@ -65,7 +65,7 @@ if (options.list) {
   console.log('  When enabled with --with-components, the system will identify and extract');
   console.log('  repeating UI patterns as components, including their HTML structure and');
   console.log('  associated styles.');
-  
+
   process.exit(0);
 }
 

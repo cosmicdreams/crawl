@@ -1,9 +1,10 @@
-// @ts-check
-import { chromium } from '@playwright/test';
+
 import fs from 'fs';
-import path from 'path';
+import path, { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { dirname } from 'path';
+
+import { chromium } from '@playwright/test';
+
 import telemetryManager from '../utils/telemetry-manager.js';
 
 /**
@@ -97,8 +98,8 @@ export const defaultConfig = {
 /**
  * Function to evaluate spacing on a page
  * This function is serialized and executed in the browser context
- * @param {Object} config - Configuration object passed from Node.js
- * @returns {Object} - Extracted spacing data
+ * @param {object} config - Configuration object passed from Node.js
+ * @returns {object} - Extracted spacing data
  */
 function evaluateSpacing(config) {
   const styles = {};
@@ -205,8 +206,8 @@ function evaluateSpacing(config) {
 /**
  * Extract spacing styles from a page
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Spacing styles
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Spacing styles
  */
 async function extractSpacing(page, config = defaultConfig) {
   try {
@@ -226,8 +227,8 @@ async function extractSpacing(page, config = defaultConfig) {
  * Extract spacing from a single page
  * @param {import('playwright').Page} page - Playwright page object
  * @param {string} url - URL to navigate to (optional)
- * @param {Object} config - Configuration object
- * @returns {Promise<Object>} - Spacing data
+ * @param {object} config - Configuration object
+ * @returns {Promise<object>} - Spacing data
  */
 async function extractSpacingFromPage(page, url = null, config = defaultConfig) {
   // Initialize telemetry if enabled
@@ -324,7 +325,7 @@ async function extractSpacingFromPage(page, url = null, config = defaultConfig) 
 /**
  * Generate a visualization of spacing values
  * @param {import('playwright').Page} page - Playwright page object
- * @param {Object} groupedSpacing - Grouped spacing values
+ * @param {object} groupedSpacing - Grouped spacing values
  * @param {string} screenshotsDir - Directory to save screenshots
  * @returns {Promise<void>}
  */
@@ -402,10 +403,10 @@ async function generateSpacingVisualization(page, groupedSpacing, screenshotsDir
 
 /**
  * Main function to extract spacing from crawled pages
- * @param {Object} customConfig - Custom configuration
+ * @param {object} customConfig - Custom configuration
  * @param {import('playwright').Browser} browser - Browser instance (optional)
- * @param {Object} logger - Logger object (optional)
- * @returns {Promise<Object>} - Spacing results
+ * @param {object} logger - Logger object (optional)
+ * @returns {Promise<object>} - Spacing results
  */
 async function extractSpacingFromCrawledPages(customConfig = {}, browser = null, logger = null) {
   // If logger is not provided, get a configured logger from config
@@ -436,7 +437,7 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
 
     // Read crawl results with a spinner
     const readingSpinner = logger.spinner('Reading crawl results');
-    
+
     if (!fs.existsSync(config.inputFile)) {
       readingSpinner.fail(`Input file not found: ${config.inputFile}`);
       return {
@@ -573,7 +574,7 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
     if (config.generateVisualizations) {
       // Create visualization spinner
       const vizSpinner = logger.spinner('Generating spacing visualization');
-      
+
       try {
         // Record visualization generation in telemetry if enabled
         if (telemetry) {
@@ -586,7 +587,7 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
         } else {
           await generateSpacingVisualization(page, groupedSpacing, config.screenshotsDir);
         }
-        
+
         vizSpinner.succeed('Spacing visualization generated');
       } catch (error) {
         vizSpinner.warn(`Could not generate spacing visualization: ${error.message}`);
@@ -605,7 +606,7 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
     if (config.writeToFile) {
       // Create save file spinner
       const saveSpinner = logger.spinner(`Saving spacing results to file`);
-      
+
       try {
         // Record file writing in telemetry if enabled
         if (telemetry) {
@@ -642,7 +643,7 @@ async function extractSpacingFromCrawledPages(customConfig = {}, browser = null,
 
     // Complete the extraction task with success
     extractionTask.complete('Spacing extraction completed successfully');
-    
+
     // Show summary of results
     logger.success(`Pages analyzed: ${results.pagesAnalyzed.length}`);
     logger.info(`Unique spacing values found: ${results.allSpacingValues.length}`);

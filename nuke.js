@@ -13,41 +13,41 @@ import readline from 'readline';
 
 // Default configuration
 const DEFAULT_CONFIG = {
-  "baseUrl": null, // Force user to provide a valid URL
-  "outputDir": "./results",
-  "maxPages": 20,
-  "timeout": 30000,
-  "screenshotsEnabled": true,
-  "ignoreExtensions": [
-    ".pdf",
-    ".jpg",
-    ".jpeg",
-    ".png",
-    ".gif",
-    ".svg",
-    ".css",
-    ".js",
-    ".zip",
-    ".tar",
-    ".gz"
+  'baseUrl': null, // Force user to provide a valid URL
+  'outputDir': './results',
+  'maxPages': 20,
+  'timeout': 30000,
+  'screenshotsEnabled': true,
+  'ignoreExtensions': [
+    '.pdf',
+    '.jpg',
+    '.jpeg',
+    '.png',
+    '.gif',
+    '.svg',
+    '.css',
+    '.js',
+    '.zip',
+    '.tar',
+    '.gz'
   ],
-  "ignorePatterns": [
-    "\\?",
-    "/admin/",
-    "/user/",
-    "/cart/",
-    "/checkout/",
-    "/search/"
+  'ignorePatterns': [
+    '\\?',
+    '/admin/',
+    '/user/',
+    '/cart/',
+    '/checkout/',
+    '/search/'
   ],
-  "respectRobotsTxt": true,
-  "telemetry": {
-    "enabled": true,
-    "outputDir": "./results/telemetry",
-    "logToConsole": true,
-    "writeToFile": true,
-    "minDuration": 5,
-    "includeTimestamps": true,
-    "includeMemoryUsage": true
+  'respectRobotsTxt': true,
+  'telemetry': {
+    'enabled': true,
+    'outputDir': './results/telemetry',
+    'logToConsole': true,
+    'writeToFile': true,
+    'minDuration': 5,
+    'includeTimestamps': true,
+    'includeMemoryUsage': true
   }
 };
 
@@ -88,17 +88,17 @@ function resetConfig() {
   const configFolder = path.join(process.cwd(), 'config');
   const configFile = path.join(configFolder, 'config.json');
   const pathsFile = path.join(configFolder, 'paths.json');
-  
+
   // Create the config folder if it doesn't exist
   if (!fs.existsSync(configFolder)) {
     fs.mkdirSync(configFolder, { recursive: true });
     console.log('✅ Created config folder');
   }
-  
+
   // Write the default config
   fs.writeFileSync(configFile, JSON.stringify(DEFAULT_CONFIG, null, 2));
   console.log('✅ Configuration reset to default values');
-  
+
   // Delete paths.json if it exists
   if (fs.existsSync(pathsFile)) {
     fs.unlinkSync(pathsFile);
@@ -115,9 +115,9 @@ function deleteCache() {
     '.extractor-cache.json',
     '.token-cache.json'
   ];
-  
+
   let deletedCount = 0;
-  
+
   cacheFiles.forEach(cacheFile => {
     const cachePath = path.join(process.cwd(), cacheFile);
     if (fs.existsSync(cachePath)) {
@@ -126,7 +126,7 @@ function deleteCache() {
       deletedCount++;
     }
   });
-  
+
   if (deletedCount === 0) {
     console.log('ℹ️ No cache files found');
   } else {
@@ -170,7 +170,7 @@ function performNuke() {
 
 /**
  * Main nuke function
- * @param {boolean} [force=false] - Whether to force nuke without confirmation
+ * @param {boolean} [force] - Whether to force nuke without confirmation
  */
 function nuke(force = false) {
   console.log('🧨 NUKE PROCESS STARTED 🧨');
