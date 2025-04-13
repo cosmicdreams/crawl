@@ -42,20 +42,38 @@ export default async function runExtractors(config, telemetry, stepsToRun, runAl
  * @returns {Promise<void>}
  */
 async function runExtractor(extractorName, config, telemetry) {
-  const extractorSpinner = ui.createSpinner(`Running ${extractorName} extractor...`);
-  extractorSpinner.start();
+  // Special handling for animations extractor which can be slow
+  if (extractorName === 'animations') {
+    ui.info(`Running ${extractorName} extractor (this may take a while)...`);
+    ui.info('The animations extractor is analyzing transitions and animations on your pages.');
+    ui.info('This process can take several minutes depending on the complexity of your site.');
+    ui.info('Progress updates will be shown as pages are processed.');
 
-  try {
-    const result = await executeExtractor(extractorName, config, telemetry);
+    try {
+      const result = await executeExtractor(extractorName, config, telemetry);
+      ui.success(`${extractorName} extraction completed successfully!`);
+      cacheManager.updateCacheForStep(extractorName, config);
+    } catch (error) {
+      ui.error(`Error running ${extractorName} extractor: ${error.message}`);
+      ui.error(error.stack);
+    }
+  } else {
+    // Normal handling for other extractors
+    const extractorSpinner = ui.createSpinner(`Running ${extractorName} extractor...`);
+    extractorSpinner.start();
 
-    /* if (result) {
-      displayExtractorResults(result, extractorName, extractorSpinner);
-    }*/
+    try {
+      const result = await executeExtractor(extractorName, config, telemetry);
 
-    cacheManager.updateCacheForStep(extractorName, config);
-  } catch (error) {
-    extractorSpinner.fail(`Error running ${extractorName} extractor: ${error.message}`);
-    ui.error(error.stack);
+      /* if (result) {
+        displayExtractorResults(result, extractorName, extractorSpinner);
+      }*/
+
+      cacheManager.updateCacheForStep(extractorName, config);
+    } catch (error) {
+      extractorSpinner.fail(`Error running ${extractorName} extractor: ${error.message}`);
+      ui.error(error.stack);
+    }
   }
 }
 

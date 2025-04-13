@@ -41,7 +41,12 @@ export default defineConfig({
         branches: 40,
         functions: 50,
         lines: 50
-      }
+      },
+      // Allow customizing the output directory via environment variable
+      // This enables separate coverage reports for unit, integration, and e2e tests
+      ...(process.env.COVERAGE_DIR && {
+        reportsDirectory: `./coverage/${process.env.COVERAGE_DIR}`
+      })
     },
 
     // Global setup and teardown

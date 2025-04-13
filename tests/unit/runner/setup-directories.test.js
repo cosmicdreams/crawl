@@ -8,28 +8,24 @@ import { describe, test, expect, vi } from 'vitest';
 
 // Mock the fs module
 vi.mock('fs', () => {
-  const mockFs = {
+  const fs = {
     existsSync: vi.fn().mockReturnValue(false),
     mkdirSync: vi.fn(),
     readFileSync: vi.fn(),
-    writeFileSync: vi.fn()
+    writeFileSync: vi.fn(),
+    readdirSync: vi.fn().mockReturnValue([])
   };
-  return {
-    ...mockFs,
-    default: mockFs
-  };
+  return { ...fs, default: fs };
 });
 
 // Mock the path module
 vi.mock('path', () => {
-  const mockPath = {
+  const path = {
     join: vi.fn().mockImplementation((...args) => args.join('/')),
-    dirname: vi.fn().mockReturnValue('/mock/dir')
+    dirname: vi.fn().mockReturnValue('/mock/dir'),
+    basename: vi.fn().mockImplementation((p) => p.split('/').pop())
   };
-  return {
-    ...mockPath,
-    default: mockPath
-  };
+  return { ...path, default: path };
 });
 
 // Mock the ui-utils module
@@ -40,7 +36,8 @@ vi.mock('../../../src/utils/ui-utils.js', () => ({
       succeed: vi.fn()
     }),
     header: vi.fn(),
-    box: vi.fn()
+    box: vi.fn(),
+    warning: vi.fn()
   }
 }));
 

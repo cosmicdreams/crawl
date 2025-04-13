@@ -6,6 +6,17 @@
 
 import { describe, test, expect, vi, beforeEach } from 'vitest';
 
+// Mock dependencies
+vi.mock('path', () => {
+  const mockPath = {
+    join: vi.fn().mockImplementation((...args) => args.join('/'))
+  };
+  return {
+    ...mockPath,
+    default: mockPath
+  };
+});
+
 // Mock console methods
 console.log = vi.fn();
 console.error = vi.fn();

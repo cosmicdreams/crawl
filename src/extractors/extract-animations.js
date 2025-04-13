@@ -53,7 +53,7 @@ export const defaultConfig = {
   ],
 
   // Maximum number of pages to analyze (set to -1 for all pages)
-  maxPages: 20,
+  maxPages: 5, // Reduced from 20 to improve performance
 
   // Screenshots directory
   screenshotsDir: path.join(__dirname, '../../results/screenshots/animations'),
@@ -61,8 +61,11 @@ export const defaultConfig = {
   // Whether to write results to file
   writeToFile: true,
 
+  // Whether to extract keyframes (can be slow on complex sites)
+  extractKeyframes: false, // Disabled by default to improve performance
+
   // Whether to generate visualizations
-  generateVisualizations: true,
+  generateVisualizations: false, // Disabled by default to improve performance
 
   // Telemetry options
   telemetry: {
@@ -178,57 +181,62 @@ function evaluateAnimations(config) {
       }
     }
 
-    // Extract keyframes from stylesheets
-    try {
-      for (let i = 0; i < document.styleSheets.length; i++) {
-        try {
-          const sheet = document.styleSheets[i];
-          const rules = sheet.cssRules || sheet.rules;
+    // Extract keyframes from stylesheets if enabled
+    if (config.extractKeyframes) {
+      try {
+        for (let i = 0; i < document.styleSheets.length; i++) {
+          try {
+            const sheet = document.styleSheets[i];
+            const rules = sheet.cssRules || sheet.rules;
 
-          for (let j = 0; j < rules.length; j++) {
-            const rule = rules[j];
+            for (let j = 0; j < rules.length; j++) {
+              const rule = rules[j];
 
-            // Check if it's a keyframes rule
-            if (rule.type === CSSRule.KEYFRAMES_RULE) {
-              const name = rule.name;
-              keyframes[name] = {};
+              // Check if it's a keyframes rule
+              if (rule.type === CSSRule.KEYFRAMES_RULE) {
+                const name = rule.name;
+                keyframes[name] = {};
 
-              // Extract keyframes
-              for (let k = 0; k < rule.cssRules.length; k++) {
-                const keyframeRule = rule.cssRules[k];
-                const keyText = keyframeRule.keyText; // e.g., "0%", "50%", "from", "to"
+                // Extract keyframes
+                for (let k = 0; k < rule.cssRules.length; k++) {
+                  const keyframeRule = rule.cssRules[k];
+                  const keyText = keyframeRule.keyText; // e.g., "0%", "50%", "from", "to"
 
-                // Extract styles for this keyframe
-                const styles = {};
-                for (let l = 0; l < keyframeRule.style.length; l++) {
-                  const prop = keyframeRule.style[l];
-                  styles[prop] = keyframeRule.style.getPropertyValue(prop);
-                }
+                  // Extract styles for this keyframe
+                  const styles = {};
+                  for (let l = 0; l < keyframeRule.style.length; l++) {
+                    const prop = keyframeRule.style[l];
+                    styles[prop] = keyframeRule.style.getPropertyValue(prop);
+                  }
 
-                keyframes[name][keyText] = styles;
-              }
-            }
-
-            // Extract CSS variables related to animations
-            if (rule.style) {
-              for (let k = 0; k < rule.style.length; k++) {
-                const prop = rule.style[k];
-                if (prop.startsWith('--') &&
-                    (prop.includes('animation') || prop.includes('transition') ||
-                     prop.includes('duration') || prop.includes('delay'))) {
-                  const value = rule.style.getPropertyValue(prop);
-                  cssVars[prop] = value;
+                  keyframes[name][keyText] = styles;
                 }
               }
+
+              // Extract CSS variables related to animations
+              if (rule.style) {
+                for (let k = 0; k < rule.style.length; k++) {
+                  const prop = rule.style[k];
+                  if (prop.startsWith('--') &&
+                      (prop.includes('animation') || prop.includes('transition') ||
+                       prop.includes('duration') || prop.includes('delay'))) {
+                    const value = rule.style.getPropertyValue(prop);
+                    cssVars[prop] = value;
+                  }
+                }
+              }
             }
+          } catch (e) {
+            // Skip inaccessible stylesheets (e.g., from different origins)
+            continue;
           }
-        } catch (e) {
-          // Skip inaccessible stylesheets (e.g., from different origins)
-          continue;
         }
+      } catch (e) {
+        // Ignore errors when accessing stylesheets
       }
-    } catch (e) {
-      // Ignore errors when accessing stylesheets
+    } else {
+      // Skip keyframe extraction for performance
+      console.log('Skipping keyframe extraction for performance');
     }
 
     return {
@@ -599,9 +607,14 @@ async function extractAnimationsFromCrawledPages(customConfig = {}, browser = nu
     };
 
     // Analyze each page
+    logger.log(`Starting animation analysis on ${pagesToAnalyze.length} pages...`);
     for (let i = 0; i < pagesToAnalyze.length; i++) {
       const pageInfo = pagesToAnalyze[i];
       logger.log(`Analyzing page ${i + 1}/${pagesToAnalyze.length}: ${pageInfo.url}`);
+
+      // Show more detailed progress
+      const progressPercent = Math.round((i / pagesToAnalyze.length) * 100);
+      logger.log(`Progress: ${progressPercent}% complete`);
 
       try {
         // Extract animations from page with telemetry if enabled
@@ -648,6 +661,9 @@ async function extractAnimationsFromCrawledPages(customConfig = {}, browser = nu
 
         // Merge CSS variables
         Object.assign(results.cssVars, data.cssVars);
+
+        // Log completion of this page
+        logger.log(`Completed analysis of page ${i + 1}/${pagesToAnalyze.length}`);
       } catch (error) {
         logger.error(`Error analyzing ${pageInfo.url}: ${error.message}`);
       }

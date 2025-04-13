@@ -1,4 +1,3 @@
-
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,33 +9,33 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
  * This script generates design tokens from the extracted data
  */
 
-// Configuration
+  // Configuration
 const config = {
-  // Input files
-  inputFiles: {
-    typography: path.join(__dirname, '../../results/raw/typography-analysis.json'),
-    colors: path.join(__dirname, '../../results/raw/color-analysis.json'),
-    spacing: path.join(__dirname, '../../results/raw/spacing-analysis.json'),
-    borders: path.join(__dirname, '../../results/raw/borders-analysis.json'),
-    animations: path.join(__dirname, '../../results/raw/animations-analysis.json')
-  },
-
-  // Output files
-  outputFiles: {
-    css: {
-      variables: path.join(__dirname, '../../results/css/variables.css'),
-      typography: path.join(__dirname, '../../results/css/typography.css'),
-      colors: path.join(__dirname, '../../results/css/colors.css'),
-      spacing: path.join(__dirname, '../../results/css/spacing.css'),
-      borders: path.join(__dirname, '../../results/css/borders.css'),
-      animations: path.join(__dirname, '../../results/css/animations.css')
+    // Input files
+    inputFiles: {
+      typography: path.join(__dirname, '../../results/raw/typography-analysis.json'),
+      colors: path.join(__dirname, '../../results/raw/color-analysis.json'),
+      spacing: path.join(__dirname, '../../results/raw/spacing-analysis.json'),
+      borders: path.join(__dirname, '../../results/raw/borders-analysis.json'),
+      animations: path.join(__dirname, '../../results/raw/animations-analysis.json'),
     },
-    tokens: {
-      json: path.join(__dirname, '../../results/tokens/tokens.json'),
-      figma: path.join(__dirname, '../../results/tokens/figma-tokens.json')
-    }
-  }
-};
+
+    // Output files
+    outputFiles: {
+      css: {
+        variables: path.join(__dirname, '../../results/css/variables.css'),
+        typography: path.join(__dirname, '../../results/css/typography.css'),
+        colors: path.join(__dirname, '../../results/css/colors.css'),
+        spacing: path.join(__dirname, '../../results/css/spacing.css'),
+        borders: path.join(__dirname, '../../results/css/borders.css'),
+        animations: path.join(__dirname, '../../results/css/animations.css'),
+      },
+      tokens: {
+        json: path.join(__dirname, '../../results/tokens/tokens.json'),
+        figma: path.join(__dirname, '../../results/tokens/figma-tokens.json'),
+      },
+    },
+  };
 
 /**
  * Generate typography tokens from extracted data
@@ -57,7 +56,7 @@ function generateTypographyTokens(typographyData) {
     fontWeight: {},
     lineHeight: {},
     letterSpacing: {},
-    textTransform: {}
+    textTransform: {},
   };
 
   // Extract font families
@@ -142,7 +141,7 @@ function generateTypographyTokens(typographyData) {
       '600': 'semibold',
       '700': 'bold',
       '800': 'extra-bold',
-      '900': 'black'
+      '900': 'black',
     };
 
     // Process font weights
@@ -267,7 +266,7 @@ function generateColorTokens(colorData) {
     secondary: {},
     neutral: {},
     accent: {},
-    semantic: {}
+    semantic: {},
   };
 
   // Helper function to determine if a color is light or dark
@@ -316,20 +315,30 @@ function generateColorTokens(colorData) {
       if (matchingVar) {
         const varName = matchingVar[0].toLowerCase();
 
-        if (varName.includes('primary')) return 'primary';
-        if (varName.includes('secondary')) return 'secondary';
-        if (varName.includes('accent')) return 'accent';
+        if (varName.includes('primary')) {
+          return 'primary';
+        }
+        if (varName.includes('secondary')) {
+          return 'secondary';
+        }
+        if (varName.includes('accent')) {
+          return 'accent';
+        }
         if (varName.includes('success') || varName.includes('error') ||
-            varName.includes('warning') || varName.includes('info')) return 'semantic';
+          varName.includes('warning') || varName.includes('info')) {
+          return 'semantic';
+        }
         if (varName.includes('gray') || varName.includes('grey') ||
-            varName.includes('black') || varName.includes('white')) return 'neutral';
+          varName.includes('black') || varName.includes('white')) {
+          return 'neutral';
+        }
       }
     }
 
     // Default categorization based on color properties
-    if (color === '#000000' || color === '#ffffff' ||
-        color === 'rgb(0, 0, 0)' || color === 'rgb(255, 255, 255)' ||
-        color.includes('rgba(0, 0, 0,') || color.includes('rgba(255, 255, 255,')) {
+    if (color === '#000' || color === '#fff' ||
+      color === 'rgb(0, 0, 0)' || color === 'rgb(255, 255, 255)' ||
+      color.includes('rgba(0, 0, 0,') || color.includes('rgba(255, 255, 255,')) {
       return 'neutral';
     }
 
@@ -343,8 +352,8 @@ function generateColorTokens(colorData) {
 
         // If R, G, and B values are close to each other, it's likely a gray
         if (Math.abs(parseInt(r, 16) - parseInt(g, 16)) < 10 &&
-            Math.abs(parseInt(g, 16) - parseInt(b, 16)) < 10 &&
-            Math.abs(parseInt(r, 16) - parseInt(b, 16)) < 10) {
+          Math.abs(parseInt(g, 16) - parseInt(b, 16)) < 10 &&
+          Math.abs(parseInt(r, 16) - parseInt(b, 16)) < 10) {
           return 'neutral';
         }
       }
@@ -374,7 +383,7 @@ function generateColorTokens(colorData) {
       secondary: [],
       neutral: [],
       accent: [],
-      semantic: []
+      semantic: [],
     };
 
     // Categorize each color
@@ -409,9 +418,9 @@ function generateColorTokens(colorData) {
       let tokenName;
 
       // Special cases for black and white
-      if (color === '#000000' || color === 'rgb(0, 0, 0)') {
+      if (color === '#000' || color === 'rgb(0, 0, 0)') {
         tokenName = 'black';
-      } else if (color === '#ffffff' || color === 'rgb(255, 255, 255)') {
+      } else if (color === '#fff' || color === 'rgb(255, 255, 255)') {
         tokenName = 'white';
       } else {
         // Generate a numeric scale for grays
@@ -438,10 +447,15 @@ function generateColorTokens(colorData) {
         if (matchingVar) {
           const varName = matchingVar[0].toLowerCase();
 
-          if (varName.includes('success')) tokenName = 'success';
-          else if (varName.includes('error')) tokenName = 'error';
-          else if (varName.includes('warning')) tokenName = 'warning';
-          else if (varName.includes('info')) tokenName = 'info';
+          if (varName.includes('success')) {
+            tokenName = 'success';
+          } else if (varName.includes('error')) {
+            tokenName = 'error';
+          } else if (varName.includes('warning')) {
+            tokenName = 'warning';
+          } else if (varName.includes('info')) {
+            tokenName = 'info';
+          }
         }
       }
 
@@ -469,7 +483,7 @@ function generateSpacingTokens(spacingData) {
     scale: {},
     margin: {},
     padding: {},
-    gap: {}
+    gap: {},
   };
 
   // Process spacing values
@@ -479,7 +493,7 @@ function generateSpacingTokens(spacingData) {
       px: spacingData.allSpacingValues.filter(value => value.endsWith('px')),
       rem: spacingData.allSpacingValues.filter(value => value.endsWith('rem')),
       em: spacingData.allSpacingValues.filter(value => value.endsWith('em')),
-      percent: spacingData.allSpacingValues.filter(value => value.endsWith('%'))
+      percent: spacingData.allSpacingValues.filter(value => value.endsWith('%')),
     };
 
     // Determine which unit to use for the scale (prefer rem, then px)
@@ -622,7 +636,7 @@ function generateBorderTokens(borderData) {
     width: {},
     radius: {},
     style: {},
-    shadow: {}
+    shadow: {},
   };
 
   // Process border widths
@@ -785,7 +799,7 @@ function generateAnimationTokens(animationData) {
     duration: {},
     timingFunction: {},
     delay: {},
-    keyframes: {}
+    keyframes: {},
   };
 
   // Process durations
@@ -951,7 +965,7 @@ async function generateDesignTokens() {
     colors: generateColorTokens(extractedData.colors),
     spacing: generateSpacingTokens(extractedData.spacing),
     borders: generateBorderTokens(extractedData.borders),
-    animations: generateAnimationTokens(extractedData.animations)
+    animations: generateAnimationTokens(extractedData.animations),
   };
 
   // Generate CSS files
@@ -1265,11 +1279,10 @@ function generateCSSFiles(tokens) {
     });
   }
 
-  colorsCSS += `/* Background colors */
-`;
-
   // Primary colors
   if (tokens.colors && tokens.colors.primary && Object.keys(tokens.colors.primary).length > 0) {
+    colorsCSS += `/* Background colors */
+`;
     Object.entries(tokens.colors.primary).forEach(([name, value]) => {
       colorsCSS += `.bg-primary-${name} {
   background-color: var(--color-primary-${name});
@@ -1350,9 +1363,9 @@ function generateCSSFiles(tokens) {
     });
   }
 
-  spacingCSS += `/* Padding utilities */
+  if (tokens.spacing && tokens.spacing.scale && Object.keys(tokens.spacing.scale).length > 0) {
+    spacingCSS += `/* Padding utilities */
 `;
-  if (Object.keys(tokens.spacing.scale).length > 0) {
     Object.entries(tokens.spacing.scale).forEach(([name, value]) => {
       spacingCSS += `.p-${name} {
   padding: var(--spacing-${name});
@@ -1388,9 +1401,9 @@ function generateCSSFiles(tokens) {
     });
   }
 
-  spacingCSS += `/* Gap utilities */
+  if (tokens.spacing && tokens.spacing.scale && Object.keys(tokens.spacing.scale).length > 0) {
+    spacingCSS += `/* Gap utilities */
 `;
-  if (Object.keys(tokens.spacing.scale).length > 0) {
     Object.entries(tokens.spacing.scale).forEach(([name, value]) => {
       spacingCSS += `.gap-${name} {
   gap: var(--spacing-${name});
@@ -1421,7 +1434,7 @@ function generateCSSFiles(tokens) {
 /* Border width utilities */
 `;
 
-  if (Object.keys(tokens.borders.width).length > 0) {
+  if (tokens.borders && tokens.borders.width && Object.keys(tokens.borders.width).length > 0) {
     Object.entries(tokens.borders.width).forEach(([name, value]) => {
       bordersCSS += `.border-${name} {
   border-width: var(--border-width-${name});
@@ -1432,9 +1445,9 @@ function generateCSSFiles(tokens) {
     });
   }
 
-  bordersCSS += `/* Border radius utilities */
+  if (tokens.borders && tokens.borders.radius && Object.keys(tokens.borders.radius).length > 0) {
+    bordersCSS += `/* Border radius utilities */
 `;
-  if (Object.keys(tokens.borders.radius).length > 0) {
     Object.entries(tokens.borders.radius).forEach(([name, value]) => {
       bordersCSS += `.rounded-${name} {
   border-radius: var(--border-radius-${name});
@@ -1444,9 +1457,9 @@ function generateCSSFiles(tokens) {
     });
   }
 
-  bordersCSS += `/* Shadow utilities */
+  if (tokens.borders && tokens.borders.shadow && Object.keys(tokens.borders.shadow).length > 0) {
+    bordersCSS += `/* Shadow utilities */
 `;
-  if (Object.keys(tokens.borders.shadow).length > 0) {
     Object.entries(tokens.borders.shadow).forEach(([name, value]) => {
       bordersCSS += `.shadow-${name} {
   box-shadow: var(--shadow-${name});
@@ -1460,16 +1473,16 @@ function generateCSSFiles(tokens) {
   fs.writeFileSync(config.outputFiles.css.borders, bordersCSS);
   console.log(`Generated ${config.outputFiles.css.borders}`);
 
-  // Generate animations.css
   let animationsCSS = `/**
  * Animation Styles
  * Generated automatically - DO NOT EDIT
  */
-
-/* Duration utilities */
 `;
 
-  if (Object.keys(tokens.animations.duration).length > 0) {
+  if (tokens.animations && tokens.animations.duration && Object.keys(tokens.animations.duration).length > 0) {
+    animationsCSS += `/* Duration utilities */
+`;
+    // Generate animations.css
     Object.entries(tokens.animations.duration).forEach(([name, value]) => {
       animationsCSS += `.duration-${name} {
   transition-duration: var(--duration-${name});
@@ -1479,9 +1492,9 @@ function generateCSSFiles(tokens) {
     });
   }
 
-  animationsCSS += `/* Timing function utilities */
+  if (tokens.animations && tokens.animations.timingFunction && Object.keys(tokens.animations.timingFunction).length > 0) {
+    animationsCSS += `/* Timing function utilities */
 `;
-  if (Object.keys(tokens.animations.timingFunction).length > 0) {
     Object.entries(tokens.animations.timingFunction).forEach(([name, value]) => {
       animationsCSS += `.ease-${name} {
   transition-timing-function: var(--ease-${name});
@@ -1492,7 +1505,7 @@ function generateCSSFiles(tokens) {
   }
 
   // Add keyframe animations if available
-  if (Object.keys(tokens.animations.keyframes).length > 0) {
+  if (tokens.animations && tokens.animations.keyframes && Object.keys(tokens.animations.keyframes).length > 0) {
     animationsCSS += `/* Keyframe animations */
 `;
 
@@ -1502,17 +1515,17 @@ function generateCSSFiles(tokens) {
 
       if (Array.isArray(keyframes)) {
         keyframes.forEach(keyframe => {
-        animationsCSS += `  ${keyframe.keyText} {
+          animationsCSS += `  ${keyframe.keyText} {
 `;
 
-        Object.entries(keyframe.properties).forEach(([prop, value]) => {
-          animationsCSS += `    ${prop}: ${value};
+          Object.entries(keyframe.properties).forEach(([prop, value]) => {
+            animationsCSS += `    ${prop}: ${value};
+`;
+          });
+
+          animationsCSS += `  }
 `;
         });
-
-        animationsCSS += `  }
-`;
-      });
       }
 
       animationsCSS += `}
@@ -1543,7 +1556,7 @@ function generateJSONTokens(tokens) {
     colors: tokens.colors,
     spacing: tokens.spacing,
     borders: tokens.borders,
-    animations: tokens.animations
+    animations: tokens.animations,
   };
 
   // Write JSON tokens
@@ -1559,8 +1572,8 @@ function generateJSONTokens(tokens) {
       borderRadius: {},
       borderWidth: {},
       shadow: {},
-      motion: {}
-    }
+      motion: {},
+    },
   };
 
   // Convert typography tokens to Figma format
@@ -1569,7 +1582,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.typography.fontFamily).forEach(([name, value]) => {
       figmaTokens.global.typography.fontFamilies[name] = {
         value,
-        type: 'fontFamilies'
+        type: 'fontFamilies',
       };
     });
   }
@@ -1579,7 +1592,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.typography.fontSize).forEach(([name, value]) => {
       figmaTokens.global.typography.fontSize[name] = {
         value,
-        type: 'fontSizes'
+        type: 'fontSizes',
       };
     });
   }
@@ -1589,7 +1602,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.typography.fontWeight).forEach(([name, value]) => {
       figmaTokens.global.typography.fontWeight[name] = {
         value,
-        type: 'fontWeights'
+        type: 'fontWeights',
       };
     });
   }
@@ -1599,7 +1612,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.typography.lineHeight).forEach(([name, value]) => {
       figmaTokens.global.typography.lineHeight[name] = {
         value,
-        type: 'lineHeights'
+        type: 'lineHeights',
       };
     });
   }
@@ -1609,7 +1622,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.typography.letterSpacing).forEach(([name, value]) => {
       figmaTokens.global.typography.letterSpacing[name] = {
         value,
-        type: 'letterSpacing'
+        type: 'letterSpacing',
       };
     });
   }
@@ -1620,7 +1633,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.colors.primary).forEach(([name, value]) => {
       figmaTokens.global.color.primary[name] = {
         value,
-        type: 'color'
+        type: 'color',
       };
     });
   }
@@ -1630,7 +1643,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.colors.secondary).forEach(([name, value]) => {
       figmaTokens.global.color.secondary[name] = {
         value,
-        type: 'color'
+        type: 'color',
       };
     });
   }
@@ -1640,7 +1653,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.colors.neutral).forEach(([name, value]) => {
       figmaTokens.global.color.neutral[name] = {
         value,
-        type: 'color'
+        type: 'color',
       };
     });
   }
@@ -1650,7 +1663,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.colors.accent).forEach(([name, value]) => {
       figmaTokens.global.color.accent[name] = {
         value,
-        type: 'color'
+        type: 'color',
       };
     });
   }
@@ -1660,7 +1673,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.colors.semantic).forEach(([name, value]) => {
       figmaTokens.global.color.semantic[name] = {
         value,
-        type: 'color'
+        type: 'color',
       };
     });
   }
@@ -1671,7 +1684,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.spacing.scale).forEach(([name, value]) => {
       figmaTokens.global.spacing[name] = {
         value,
-        type: 'spacing'
+        type: 'spacing',
       };
     });
   }
@@ -1682,7 +1695,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.borders.radius).forEach(([name, value]) => {
       figmaTokens.global.borderRadius[name] = {
         value,
-        type: 'borderRadius'
+        type: 'borderRadius',
       };
     });
   }
@@ -1692,7 +1705,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.borders.width).forEach(([name, value]) => {
       figmaTokens.global.borderWidth[name] = {
         value,
-        type: 'borderWidth'
+        type: 'borderWidth',
       };
     });
   }
@@ -1702,7 +1715,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.borders.shadow).forEach(([name, value]) => {
       figmaTokens.global.shadow[name] = {
         value,
-        type: 'boxShadow'
+        type: 'boxShadow',
       };
     });
   }
@@ -1713,7 +1726,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.animations.duration).forEach(([name, value]) => {
       figmaTokens.global.motion.duration[name] = {
         value,
-        type: 'duration'
+        type: 'duration',
       };
     });
   }
@@ -1723,7 +1736,7 @@ function generateJSONTokens(tokens) {
     Object.entries(tokens.animations.timingFunction).forEach(([name, value]) => {
       figmaTokens.global.motion.easing[name] = {
         value,
-        type: 'cubicBezier'
+        type: 'cubicBezier',
       };
     });
   }

@@ -109,8 +109,9 @@ function updateCacheForStep(step, config) {
 
   // Update file stats based on the step
   if (step === 'crawl') {
-    const pathsFile = path.join(__dirname, '../../results/paths.json');
-    const crawlResultsFile = path.join(__dirname, '../../results/raw/crawl-results.json');
+    const pathsFile = path.join(process.cwd(), 'config/paths.json');
+    const crawlResultsFile = path.join(process.cwd(), 'results/raw/crawl-results.json');
+    console.log('Updating cache for paths file at:', pathsFile);
 
     cache.inputHashes['paths.json'] = calculateFileHash(pathsFile);
     cache.fileStats['paths.json'] = getFileStats(pathsFile);
@@ -172,15 +173,19 @@ function checkIfStepNeedsRun(step, config) {
 
   // Check based on step
   if (step === 'crawl') {
-    const pathsFile = path.join(__dirname, '../../config/paths.json');
+    // Use the DEFAULT_PATHS_PATH constant from config-manager.js
+    const pathsFile = path.join(process.cwd(), 'config/paths.json');
+    console.log('Checking for paths file at:', pathsFile);
 
     // If paths.json doesn't exist, need to run
     if (!fs.existsSync(pathsFile)) {
+      console.log('Paths file not found at:', pathsFile);
       return {
         needsRun: true,
         reason: 'paths.json does not exist',
       };
     }
+    console.log('Paths file found at:', pathsFile);
 
     // If paths.json hash changed, need to run
     const currentHash = calculateFileHash(pathsFile);
