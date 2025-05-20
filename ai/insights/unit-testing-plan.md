@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document outlines a comprehensive plan for implementing unit tests for the Design Token Crawler application using Jest. The goal is to ensure code reliability, facilitate refactoring, and improve overall code quality through systematic testing of core functionality.
+This document outlines a comprehensive plan for implementing unit tests for the Design Token Crawler application using Vitest. The goal is to ensure code reliability, facilitate refactoring, and improve overall code quality through systematic testing of core functionality.
 
 ## Testing Strategy
 
@@ -11,44 +11,62 @@ We'll adopt a modular testing approach, focusing on:
 1. **Pure Functions**: Prioritize testing pure functions that have clear inputs and outputs
 2. **Core Utilities**: Test utility modules that are used throughout the application
 3. **Data Processing**: Test data transformation and token generation logic
-4. **Mocking External Dependencies**: Use Jest's mocking capabilities for file system, network requests, etc.
+4. **Mocking External Dependencies**: Use Vitest's mocking capabilities for file system, network requests, etc.
 5. **Integration Points**: Test key integration points between modules
+6. **Test Organization**: Organize tests by type (unit, integration) and module
 
 ## Test Environment Setup
 
-### Jest Configuration
+### Vitest Configuration
 
 ```javascript
-// jest.config.js
-module.exports = {
-  testEnvironment: 'node',
-  collectCoverage: true,
-  collectCoverageFrom: [
-    'utils/**/*.js',
-    'scripts/**/*.js',
-    '!**/node_modules/**',
-    '!**/vendor/**'
-  ],
-  coverageThreshold: {
-    global: {
-      statements: 70,
-      branches: 60,
-      functions: 70,
-      lines: 70
+// vitest.config.js
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    // Test environment
+    environment: 'node',
+    globals: true,
+
+    // Include patterns for test files
+    include: ['tests/**/*.test.js', 'tests/**/*.spec.js'],
+
+    // Exclude patterns
+    exclude: ['node_modules', 'results', 'backup'],
+
+    // Browser testing configuration
+    browser: {
+      enabled: false, // Disabled by default, enable with --browser flag
+      name: 'chromium',
+      provider: 'playwright',
+      headless: true
+    },
+
+    // Coverage configuration
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: ['node_modules/**', 'tests/**'],
+      thresholds: {
+        statements: 70,
+        branches: 60,
+        functions: 70,
+        lines: 70
+      }
     }
-  },
-  testMatch: ['**/__tests__/**/*.js', '**/?(*.)+(spec|test).js'],
-  verbose: true
-};
+  }
+});
 ```
 
 ### Package.json Scripts
 
 ```json
 "scripts": {
-  "test": "jest",
-  "test:watch": "jest --watch",
-  "test:coverage": "jest --coverage"
+  "test": "vitest run",
+  "test:watch": "vitest",
+  "test:coverage": "vitest run --coverage",
+  "test:ui": "vitest --ui"
 }
 ```
 
@@ -233,9 +251,9 @@ describe('Generate Tokens', () => {
       allFontSizes: ['16px', '24px'],
       allFontWeights: ['400', '700']
     };
-    
+
     const tokens = generateTokens.generateTypographyTokens(typographyData);
-    
+
     expect(tokens).toHaveProperty('fontFamily');
     expect(tokens).toHaveProperty('fontSize');
     expect(tokens).toHaveProperty('fontWeight');
@@ -248,9 +266,9 @@ describe('Generate Tokens', () => {
     const colorData = {
       allColorValues: ['#ff0000', '#00ff00', '#0000ff', '#333333', '#f5f5f5']
     };
-    
+
     const tokens = generateTokens.generateColorTokens(colorData);
-    
+
     expect(tokens).toHaveProperty('primary');
     expect(tokens).toHaveProperty('secondary');
     expect(tokens).toHaveProperty('neutral');
@@ -300,9 +318,9 @@ describe('Extract Colors', () => {
   test('extractColorsFromPage returns correct color data structure', async () => {
     const page = (await chromium.launch()).newContext().then(ctx => ctx.newPage());
     const url = 'https://example.com';
-    
+
     const result = await extractColors.extractColorsFromPage(page, url);
-    
+
     expect(result).toHaveProperty('elementStyles');
     expect(result).toHaveProperty('colorValues');
     expect(result).toHaveProperty('cssVars');
@@ -373,28 +391,49 @@ describe('Nuke Module', () => {
 
 **Challenge**: Testing code that interacts with a browser via Playwright.
 
-**Solution**: 
+**Solution**:
 - Mock Playwright's API for unit tests
 - Create separate integration tests for browser interactions
 - Use snapshot testing for HTML output
+- Use @vitest/browser for browser-specific tests
 
 ### 2. File System Operations
 
 **Challenge**: Testing code that reads from and writes to the file system.
 
 **Solution**:
-- Mock the fs module using Jest's mocking capabilities
+- Mock the fs module using Vitest's mocking capabilities
 - Create test fixtures for file content
 - Verify file operations through mock function calls
+- Ensure proper default export mocking for ES modules
 
 ### 3. Asynchronous Code
 
 **Challenge**: Testing asynchronous code with promises and async/await.
 
 **Solution**:
-- Use Jest's async test capabilities
+- Use Vitest's async test capabilities
 - Ensure proper error handling in tests
 - Use fake timers for time-dependent code
+
+### 4. Module Mocking
+
+**Challenge**: Properly mocking modules with both named exports and default exports.
+
+**Solution**:
+- Mock modules before importing them
+- Return both named exports and default export in the mock
+- Use vi.mock() with a factory function for complex mocks
+- Avoid using vi.spyOn() on already mocked functions
+
+### 5. ESLint Integration
+
+**Challenge**: ESLint rules for import order and named exports can conflict with test patterns.
+
+**Solution**:
+- Use targeted ESLint disable comments for specific rules in test files
+- Configure ESLint to allow importing from dev dependencies in test files
+- Organize imports consistently across test files
 
 ## Implementation Plan
 
@@ -439,8 +478,63 @@ We recommend setting up a CI pipeline that:
 3. Prevents merging code that breaks tests
 4. Generates and publishes coverage reports
 
+## Test Directory Structure
+
+We've organized the tests into a clear directory structure:
+
+```
+/tests
+  /fixtures                       - Shared test data and setup
+    mock-data.js                  - Mock data for all tests
+    test-setup.js                 - Common test setup code
+    test-mocks.js                 - Mocking utilities for tests
+
+  /unit                           - Unit tests for individual functions
+    /utils                        - Tests for utility functions
+      config-manager.test.js      - Tests for config manager
+      telemetry-manager.test.js   - Tests for telemetry manager
+
+    /extractors                   - Tests for extractor modules
+      extract-colors.test.js      - Tests for color extractor
+      extract-spacing.test.js     - Tests for spacing extractor
+      extract-borders.test.js     - Tests for border extractor
+      extract-animations.test.js  - Tests for animation extractor
+      extract-components.test.js  - Tests for component extractor
+      extract-typography.test.js  - Tests for typography extractor
+
+    /generators                   - Tests for generator modules
+      generate-tokens.test.js     - Tests for token generator
+      generate-reports.test.js    - Tests for report generator
+
+    /crawler                      - Tests for crawler modules
+      site-crawler.test.js        - Tests for site crawler
+
+  /integration                    - Tests for module interactions
+    crawler-extractors.test.js    - Tests for crawler + extractors
+    extractors-generators.test.js - Tests for extractors + generators
+
+  /setup                          - Test environment setup
+    vitest-setup.test.js          - Vitest setup verification
+```
+
+## Lessons Learned
+
+1. **Proper Module Mocking**: When using Vitest, it's important to mock modules before importing them. This ensures that the mocked version is used throughout the tests.
+
+2. **Default Exports**: When mocking modules with default exports, make sure to include both the named exports and the default export in the mock.
+
+3. **ESLint Configuration**: The ESLint rules for import order and named exports can be challenging when working with test files. Using targeted disable comments is a good approach.
+
+4. **Test Organization**: Organizing tests by type (unit, integration) and module makes it easier to maintain and run specific tests.
+
+5. **Playwright Mocking**: Mocking Playwright requires careful attention to the browser, context, and page objects and their methods.
+
+6. **File System Mocking**: When mocking the fs module, remember to include both the named exports and the default export to support different import styles.
+
 ## Conclusion
 
 This testing plan provides a comprehensive approach to ensuring the reliability and maintainability of the Design Token Crawler application. By focusing on pure functions and core utilities first, we can establish a solid testing foundation before moving on to more complex components.
 
 The modular approach allows for incremental implementation of tests, with each phase building on the previous one. This will result in a robust test suite that provides confidence in the application's functionality and facilitates future enhancements.
+
+By following the lessons learned and using the organized test directory structure, we can maintain a clean and effective test suite that grows with the application.
