@@ -1,0 +1,35 @@
+.navigation {
+  background-color: #f8f9fa;
+  padding: 12px 20px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.navList {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 16px;
+}
+
+.navItem {
+  /* No specific styles needed for li */
+}
+
+.navButton {
+  padding: 8px 16px;
+  background-color: transparent;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: normal;
+  transition: background-color 0.2s, color 0.2s, font-weight 0.2s;
+}
+
+.navButtonActive {
+  composes: navButton;
+  background-color: #0066cc;
+  color: white;
+  font-weight: bold;
+}

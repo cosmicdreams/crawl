@@ -1,0 +1,274 @@
+.visualizationPanel {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.panelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.panelTitle {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.panelControls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.controlGroup {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.controlLabel {
+  font-size: 0.9rem;
+}
+
+.controlSelect {
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 0.9rem;
+}
+
+.viewToggle {
+  display: flex;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.viewButton {
+  padding: 6px 12px;
+  background-color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border-left: 1px solid #ced4da; /* Add separator */
+}
+
+.viewButton:first-child {
+  border-left: none;
+}
+
+.viewButtonActive {
+  composes: viewButton;
+  background-color: #0066cc;
+  color: white;
+}
+
+.panelContent {
+  min-height: 300px;
+}
+
+.noTokens {
+  padding: 40px;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* Common Token Item Styles */
+.tokenItem {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.tokenItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.tokenDetails {
+  font-size: 0.9rem;
+}
+
+.tokenName {
+  font-weight: bold;
+  margin-bottom: 5px;
+  word-break: break-all;
+}
+
+.tokenValue {
+  color: #6c757d;
+  margin-bottom: 5px;
+  word-break: break-all;
+}
+
+.tokenProperties {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  margin-bottom: 5px;
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.tokenUsage {
+  font-size: 0.85rem;
+  color: #0066cc;
+  font-weight: 500;
+}
+
+/* Color Tokens */
+.colorTokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.colorTokensGrid {
+  composes: colorTokens;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.colorTokensList {
+  composes: colorTokens;
+  display: flex;
+  flex-direction: column;
+}
+
+.colorPreview {
+  width: 100%;
+  height: 100px;
+  border-radius: 6px;
+  border: 1px solid #eee;
+  margin-bottom: 10px;
+}
+
+/* Typography Tokens */
+.typographyTokens {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.typographyTokensGrid {
+  composes: typographyTokens;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.typographyPreview {
+  padding: 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Spacing Tokens */
+.spacingTokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.spacingTokensGrid {
+  composes: spacingTokens;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.spacingTokensList {
+  composes: spacingTokens;
+  display: flex;
+  flex-direction: column;
+}
+
+.spacingPreview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  height: 60px; /* Fixed height for consistency */
+}
+
+.spacingBox {
+  background-color: #0066cc;
+  border-radius: 4px;
+  height: 20px; /* Fixed height for visualization */
+}
+
+/* Border Tokens */
+.borderTokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.borderTokensGrid {
+  composes: borderTokens;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.borderTokensList {
+  composes: borderTokens;
+  display: flex;
+  flex-direction: column;
+}
+
+.borderPreview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  height: 100px; /* Fixed height */
+}
+
+.borderBox {
+  width: 80px; /* Fixed size */
+  height: 80px; /* Fixed size */
+  background-color: white;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .panelHeader {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .panelControls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .colorTokensGrid,
+  .typographyTokensGrid,
+  .spacingTokensGrid,
+  .borderTokensGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .tokenProperties {
+    grid-template-columns: 1fr;
+  }
+}
