@@ -1,0 +1,60 @@
+{
+  "baseUrl": "http://localhost:3000",
+  "maxPages": 20,
+  "timeout": 30000,
+  "ignorePatterns": [
+    "\\?",
+    "/admin/",
+    "/user/",
+    "/cart/",
+    "/checkout/",
+    "/search/",
+    "/api/"
+  ],
+  "ignoreExtensions": [
+    ".pdf",
+    ".jpg",
+    ".jpeg",
+    ".png",
+    ".gif",
+    ".svg",
+    ".css",
+    ".js",
+    ".zip",
+    ".tar",
+    ".gz"
+  ],
+  "screenshots": true,
+  "outputDir": "./results",
+  "extractors": {
+    "colors": {
+      "includeTextColors": true,
+      "includeBackgroundColors": true,
+      "includeBorderColors": true,
+      "minimumOccurrences": 2
+    },
+    "typography": {
+      "includeHeadings": true,
+      "includeBodyText": true,
+      "includeSpecialText": true,
+      "minOccurrences": 2
+    },
+    "spacing": {
+      "includeMargins": true,
+      "includePadding": true,
+      "includeGap": true,
+      "minOccurrences": 2
+    },
+    "borders": {
+      "includeBorderWidth": true,
+      "includeBorderStyle": true,
+      "includeBorderRadius": true,
+      "includeShadows": true,
+      "minOccurrences": 2
+    }
+  },
+  "tokens": {
+    "outputFormats": ["css", "json", "figma"],
+    "prefix": "dt"
+  }
+}

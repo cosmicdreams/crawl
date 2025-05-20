@@ -1,0 +1,251 @@
+/* src/ui/components/dashboard/VisualizationPanel.css */
+
+.visualization-panel {
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.panel-controls {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.control-group {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.control-select {
+  padding: 6px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background-color: white;
+  font-size: 0.9rem;
+}
+
+.view-toggle {
+  display: flex;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.view-button {
+  padding: 6px 12px;
+  background-color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.view-button.active {
+  background-color: #0066cc;
+  color: white;
+}
+
+.panel-content {
+  min-height: 300px;
+}
+
+.no-tokens {
+  padding: 40px;
+  text-align: center;
+  color: #6c757d;
+}
+
+/* Color tokens */
+.color-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.color-tokens.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.color-tokens.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.color-preview {
+  width: 100%;
+  height: 100px;
+  border-radius: 6px;
+  border: 1px solid #dee2e6;
+  margin-bottom: 10px;
+}
+
+/* Typography tokens */
+.typography-tokens {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.typography-tokens.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.typography-preview {
+  padding: 15px;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+}
+
+/* Spacing tokens */
+.spacing-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.spacing-tokens.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.spacing-tokens.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.spacing-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.spacing-box {
+  background-color: #0066cc;
+  border-radius: 4px;
+}
+
+/* Border tokens */
+.border-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.border-tokens.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.border-tokens.list {
+  display: flex;
+  flex-direction: column;
+}
+
+.border-preview {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.border-box {
+  width: 100px;
+  height: 100px;
+  background-color: white;
+}
+
+/* Token items */
+.token-item {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 15px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.token-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.token-details {
+  font-size: 0.9rem;
+}
+
+.token-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.token-value {
+  color: #6c757d;
+  margin-bottom: 5px;
+}
+
+.token-properties {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 5px;
+  margin-bottom: 5px;
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.token-usage {
+  font-size: 0.85rem;
+  color: #0066cc;
+  font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .panel-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .panel-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  
+  .color-tokens.grid,
+  .typography-tokens.grid,
+  .spacing-tokens.grid,
+  .border-tokens.grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .token-properties {
+    grid-template-columns: 1fr;
+  }
+}

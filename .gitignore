@@ -1,9 +1,9 @@
-results
 node_modules
-.crawl-cache.json
-.idea
-config.json
+dist
+.env
+.DS_Store
 coverage
-ai/issues/open
-ai/issues/closed
+results
+.idea
 backup
+*storybook.log
