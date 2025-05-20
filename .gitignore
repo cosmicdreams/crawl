@@ -1,9 +1,5 @@
-node_modules
-dist
-.env
-.DS_Store
-coverage
-results
 .idea
-backup
+output
+node_modules
+
 *storybook.log
