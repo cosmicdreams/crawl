@@ -1,0 +1,123 @@
+.tokenCard {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  transition: box-shadow 0.2s ease-in-out;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  background-color: #fff;
+}
+
+.tokenCardClickable {
+  composes: tokenCard;
+  cursor: pointer;
+}
+
+.tokenCard:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.previewContainer {
+  margin-bottom: 8px;
+}
+
+.colorPreview {
+  width: 100%;
+  height: 40px;
+  border-radius: 4px;
+  border: 1px solid #eee;
+}
+
+.typographyPreview {
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px dashed #eee;
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spacingPreview {
+  width: 100%;
+  height: 40px;
+  position: relative;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.spacingBox {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 20px;
+  background-color: #0066cc;
+  border-radius: 4px;
+}
+
+.borderPreviewContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 60px;
+  margin-bottom: 8px;
+}
+
+.radiusPreview {
+  width: 40px;
+  height: 40px;
+  background-color: #0066cc;
+}
+
+.widthPreview {
+  width: 60px;
+  height: 40px;
+  border-color: #0066cc;
+  border-radius: 4px;
+}
+
+.stylePreview {
+  width: 60px;
+  height: 40px;
+  border-width: 2px;
+  border-color: #0066cc;
+  border-radius: 4px;
+}
+
+.shadowPreview {
+  width: 60px;
+  height: 40px;
+  background-color: #fff;
+  border: 1px solid #eee;
+  border-radius: 4px;
+}
+
+.tokenName {
+  font-weight: bold;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.tokenValue {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 8px;
+  word-break: break-all;
+}
+
+.tokenCategory {
+  display: inline-block;
+  background-color: #f0f0f0;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: #666;
+}
+
+.tokenUsage {
+  font-size: 12px;
+  color: #999;
+  margin-top: 8px;
+}

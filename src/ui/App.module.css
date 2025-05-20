@@ -1,0 +1,22 @@
+.appContainer {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+.header {
+  background-color: #0066cc;
+  color: white;
+  padding: 16px 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.headerTitle {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+.pageContent {
+  /* Placeholder style to avoid empty ruleset */
+  display: block;
+}
+
+/* Minimal placeholder for App.module.css to resolve import errors */

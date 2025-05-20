@@ -1,0 +1,78 @@
+.tokenGrid {
+  padding: 20px;
+}
+
+.title {
+  margin-bottom: 20px;
+}
+
+.filters {
+  margin-bottom: 20px;
+}
+
+.searchInput {
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  width: 100%;
+  margin-bottom: 12px;
+}
+
+.filterSection {
+  margin-bottom: 12px;
+}
+
+.filterLabel {
+  font-weight: bold;
+  margin-bottom: 8px;
+}
+
+.filterButtons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filterButton {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background-color: #fff;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.filterButtonActive {
+  composes: filterButton;
+  background-color: #0066cc;
+  color: #fff;
+}
+
+.clearButton {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background-color: #f44336;
+  color: #fff;
+  cursor: pointer;
+}
+
+.countInfo {
+  margin-bottom: 12px;
+  font-weight: bold;
+}
+
+.gridContainer {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 16px;
+}
+
+.noTokensMessage {
+  padding: 40px;
+  text-align: center;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  color: #666;
+}
