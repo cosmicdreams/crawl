@@ -17,9 +17,9 @@ Available Configuration to modify:
 
 ```json5
 {
-  "base_url": "https://pncb.ddev.site",
+  "base_url": "https://local.ddev.site",
   // Used as the starting point for the crawl
-  "name": "PNCB Website Analysis",
+  "name": "Local Website Analysis",
   // Name used in reports
   "crawl_settings": {
     // Maximum depth of the crawl
