@@ -11,7 +11,8 @@
     "metadata": "node index.js metadata",
     "organize": "node index.js organize",
     "extract": "node index.js extract",
-    "all": "node index.js all"
+    "all": "node index.js all",
+    "lint": "eslint ."
   },
   "keywords": [
     "crawler",

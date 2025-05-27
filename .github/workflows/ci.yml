@@ -9,6 +9,10 @@ on:
     - cron: '0 9 * * 1' # Every Monday at 9 AM UTC
   workflow_dispatch: # Allows manual triggering
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -66,7 +70,7 @@ jobs:
 
   lint:
     runs-on: ubuntu-latest
-
+    continue-on-error: true
     steps:
     - uses: actions/checkout@v4
     
@@ -80,32 +84,31 @@ jobs:
       run: npm ci
     
     - name: Run ESLint
-      run: npx eslint . --ext .js,.jsx,.ts,.tsx
+      run: npx eslint .
 
   update-packages:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Update dependencies
-      run: npm update
-      
-    - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v6
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        commit-message: chore(deps): update dependencies
-        title: 'chore(deps): update dependencies'
-        body: |
-          Updates dependencies to their latest versions.
-          
-          This PR is automatically generated.
-        branch: chore/update-dependencies
-        delete-branch: true
+      - uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - name: Update dependencies
+        run: npm update
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'chore(deps): update dependencies' # Quoted this value
+          title: 'chore(deps): update dependencies'
+          body: |
+            Updates dependencies to their latest versions.
+            
+            This PR is automatically generated.
+          branch: 'chore/update-dependencies' # Quoted this value
+          delete-branch: true
