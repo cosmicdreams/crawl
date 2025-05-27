@@ -29,5 +29,11 @@
     "jsdom": "^22.1.0",
     "ora": "^8.2.0",
     "playwright": "^1.51.1"
+  },
+  "devDependencies": {
+    "@storybook/experimental-addon-test": "^8.6.14",
+    "@storybook/react-vite": "^8.6.14",
+    "@testing-library/react": "^16.3.0",
+    "vitest": "^3.1.4"
   }
 }
