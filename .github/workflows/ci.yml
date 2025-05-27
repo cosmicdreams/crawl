@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  schedule:
+    - cron: '0 9 * * 1' # Every Monday at 9 AM UTC
+  workflow_dispatch: # Allows manual triggering
 
 jobs:
   test:
@@ -25,15 +28,32 @@ jobs:
     - name: Install Playwright browsers
       run: npx playwright install --with-deps chromium
     
-    - name: Run tests with coverage
-      run: npm run test:ci
+    - name: Run Playwright tests
+      run: npx playwright test
     
-    - name: Upload test results
+    - name: Upload Playwright HTML report
       uses: actions/upload-artifact@v4
       if: always()
       with:
-        name: test-results
-        path: test-results/
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 30
+
+    - name: Deploy Playwright report to GitHub Pages
+      if: always()
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./playwright-report
+        # Optional: publish_branch: gh-pages (default)
+        # Optional: cname: your.custom.domain.com
+
+    - name: Upload test results (JUnit, etc. if configured)
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: test-results # This might contain JUnit XML or other formats
+        path: test-results/ # Adjust if your Playwright config outputs other reports here
         retention-days: 30
     
     - name: Upload coverage to Codecov
@@ -62,7 +82,7 @@ jobs:
     - name: Run ESLint
       run: npx eslint . --ext .js,.jsx,.ts,.tsx
 
-  build:
+  update-packages:
     runs-on: ubuntu-latest
 
     steps:
@@ -73,16 +93,19 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
-    
-    - name: Install dependencies
-      run: npm ci
-    
-    - name: Build
-      run: npm run build
-    
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
+        
+    - name: Update dependencies
+      run: npm update
+      
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v6
       with:
-        name: build
-        path: dist/
-        retention-days: 7
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: chore(deps): update dependencies
+        title: 'chore(deps): update dependencies'
+        body: |
+          Updates dependencies to their latest versions.
+          
+          This PR is automatically generated.
+        branch: chore/update-dependencies
+        delete-branch: true
