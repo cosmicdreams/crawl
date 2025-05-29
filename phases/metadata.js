@@ -52,12 +52,12 @@ async function organizeMetadata(metadata, spinner = null) {
       const bodyClasses = path.body_classes;
 
       // Initialize group if it doesn't exist
-      if (!metadata.group_body_class[bodyClasses]) {
-        metadata.group_body_class[bodyClasses] = [];
+      if (!enhanced.group_body_class[bodyClasses]) {
+        enhanced.group_body_class[bodyClasses] = [];
       }
 
       // Add to the appropriate group
-      metadata.group_body_class[bodyClasses].push({
+      enhanced.group_body_class[bodyClasses].push({
         url: path.url,
         title: path.title,
         depth: path.depth,
@@ -402,7 +402,7 @@ async function gatherMetadata(baseUrl = CONFIG.base_url, batchSize = CONFIG.craw
 
   // Check if paths.json exists
   if (!fs.existsSync(PATHS_FILE)) {
-    spinner.fail(spinner_id, `Error: ${PATHS_FILE} not found. Run initial crawl first.`);
+    spinner.fail(`Error: ${PATHS_FILE} not found. Run initial crawl first.`); // Ensure spinner_id is not here
     return;
   }
 
@@ -412,7 +412,7 @@ async function gatherMetadata(baseUrl = CONFIG.base_url, batchSize = CONFIG.craw
     spinner.text = chalk.blue('Loading existing paths data...');
     pathsData = JSON.parse(fs.readFileSync(PATHS_FILE, 'utf8'));
   } catch (error) {
-    spinner.fail(spinner_id, `Error reading paths file: ${error.message}`);
+    spinner.fail(`Error reading paths file: ${error.message}`); // spinner_id removed
     return;
   }
 
@@ -433,7 +433,7 @@ async function gatherMetadata(baseUrl = CONFIG.base_url, batchSize = CONFIG.craw
       metadata_processed: false,
     }));
 
-  spinner.text = chalk.magentaBright(`Found ${chalk.bold(pathsToProcess.length)} paths to gather metadata for`);
+  spinner.text = chalk.magentaBright(`Found ${chalk.bold(pathsToProcess.length)} paths to gather metadata for`); // Uncommented
 
   // Launch browser
   const browser = await chromium.launch();
@@ -604,7 +604,7 @@ async function gatherMetadata(baseUrl = CONFIG.base_url, batchSize = CONFIG.craw
 
     // Organize metadata with new grouping structure
     spinner.text = 'Organizing metadata into grouped collections...';
-    const organizedMetadata = organizeMetadata(metadata);
+    const organizedMetadata = await organizeMetadata(metadata, spinner); // Pass spinner
     spinner.text = `Created ${chalk.bold(organizedMetadata.unique_paths.length)} unique testing paths`;
 
     // Generate template analysis
