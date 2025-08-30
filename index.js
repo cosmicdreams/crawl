@@ -22,204 +22,258 @@ import chalk from 'chalk';
 import { Command } from 'commander';
 import { initialCrawl } from './phases/initial-crawl.js';
 import { deepenCrawl } from './phases/deepen-crawl.js';
-import { gatherMetadata, organizeMetadata } from './phases/metadata.js';
+import { gatherMetadata } from './phases/metadata.js';
 import { extractCss } from './phases/extract.js';
 import { CONFIG } from './utils/config-utils.js';
 import { SpinnerManager, createSummaryBox } from './utils/output-utils.js';
-import { fileURLToPath } from 'node:url';
+// Note: logger is TypeScript, compile first or use a JS logger for the main entry point
+// For now, let's create a simple logger wrapper
+
+const logger = {
+  info: (message) => console.log(chalk.blue(`ℹ ${message}`)),
+  success: (message) => console.log(chalk.green(`✅ ${message}`)),
+  error: (message) => console.error(chalk.red(`❌ ${message}`)),
+  warn: (message) => console.warn(chalk.yellow(`⚠️  ${message}`)),
+};
 
 // Get __dirname equivalent in ESM
+import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Ensure output directories exist
-const OUTPUT_DIR = path.join(__dirname, 'output');
-if (!fs.existsSync(OUTPUT_DIR)) {
-  fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-}
-
-// Ensure extract directory exists
-const EXTRACT_DIR = path.join(OUTPUT_DIR, 'extract');
-if (!fs.existsSync(EXTRACT_DIR)) {
-  fs.mkdirSync(EXTRACT_DIR, { recursive: true });
-}
-
-// Use base URL from config, with override from a file if it exists
-let baseUrl = CONFIG.base_url;
-const baseUrlFile = path.join(__dirname, '..', 'base_url.md');
-if (fs.existsSync(baseUrlFile)) {
-  const fileContent = fs.readFileSync(baseUrlFile, 'utf8');
-  const trimmedUrl = fileContent.trim();
-  if (trimmedUrl && trimmedUrl.startsWith('http')) {
-    // If the file exists, it overrides the config
-    baseUrl = trimmedUrl;
-    console.log(`Using base URL from file: ${baseUrl}`);
-  }
-} else {
-  console.log(`Using base URL from config: ${baseUrl}`);
-}
-
-// Set up the command line interface
 const program = new Command();
 
 program
   .name('site-crawler')
-  .description('PNCB Site Crawler with phased approach')
+  .description('Crawl websites to extract design tokens and perform analysis')
   .version('1.0.0');
 
-program
-  .command('initial')
-  .description('Run initial crawl (1 level deep)')
-  .option('-u, --url <url>', 'Base URL to crawl', baseUrl)
-  .action(async (options) => {
-    // Create a spinner just for this command
-    let spinner = ora('🔍 Starting initial crawl (1 level deep)...').start();
-    await initialCrawl(options.url, spinner);
-    console.log('npm run initial complete.')
-    process.exit(1);
+// Common options for validation
+const commonOptions = [
+  ['-u, --url <url>', 'Base URL to crawl (required)', CONFIG.base_url || ''],
+  ['-o, --output <dir>', 'Output directory', CONFIG.output_dir || './output'],
+  ['-d, --depth <number>', 'Maximum crawl depth', parseInt, CONFIG.crawl_settings?.max_depth || 3],
+  ['-t, --timeout <ms>', 'Request timeout in milliseconds', parseInt, CONFIG.crawl_settings?.timeout || 45000],
+  ['-r, --retries <number>', 'Maximum retry attempts', parseInt, CONFIG.crawl_settings?.max_retries || 2]
+];
+
+// Add common options to a command
+function addCommonOptions(command) {
+  commonOptions.forEach(([flags, description, ...rest]) => {
+    command.option(flags, description, ...rest);
   });
-
-program
-  .command('deepen')
-  .description('Deepen crawl by one more level')
-  .option('-u, --url <url>', 'Base URL to crawl', baseUrl)
-  .option('-c, --count <number>', 'How many deepening phases to run', '1')
-  .action(async (options) => {
-    // Create a spinner for the entire deepening process
-    let spinner = ora(`🔍 Deepening crawl by ${options.count} levels...`).start();
-
-    for (let i = 0; i < parseInt(options.count); i++) {
-      spinner.info(`📊 Phase ${i + 1} of ${options.count}`);
-      await deepenCrawl(options.url, undefined, spinner);
-    }
-    console.log('npm run deepen complete.')
-    process.exit(1);
-  });
-
-program
-  .command('metadata')
-  .description('Gather metadata for existing paths')
-  .option('-u, --url <url>', 'Base URL to crawl', baseUrl)
-  .option('-b, --batch <number>', 'Batch size for processing', '20')
-  .action(async (options) => {
-    // Create a spinner for the metadata gathering process
-    let spinner = ora('🔍 Gathering metadata for existing paths...').start();
-    await gatherMetadata(options.url, parseInt(options.batch), spinner);
-    console.log('npm run metadata complete.')
-    process.exit(1);
-  });
-
-program
-  .command('organize')
-  .description('Transform metadata for different uses')
-  .action(async (options) => {
-    // Create a spinner for the metadata gathering process
-    let spinner = ora('🔍 Gathering metadata for existing paths...').start();
-    let metadata = fs.existsSync(path.join(OUTPUT_DIR, 'metadata.json')) ?
-      JSON.parse(fs.readFileSync(path.join(OUTPUT_DIR, 'metadata.json'), 'utf8')) : {};
-    await organizeMetadata(metadata, spinner);
-    console.log('npm run organize complete.')
-    process.exit(1);
-  });
-
-program
-  .command('extract')
-  .description('Extract CSS information from unique paths identified in metadata')
-  .option('-u, --url <url>', 'Base URL to crawl', baseUrl)
-  .action(async (options) => {
-    // Create a spinner for the CSS extraction process
-    let spinner = ora('🎨 Extracting CSS information from unique paths...').start();
-    await extractCss(options.url, spinner);
-    console.log('npm run extract complete.')
-    process.exit(1);
-  });
-
-program
-  .command('all')
-  .description('Run complete crawl process (initial, deepen, metadata, extract)')
-  .option('-u, --url <url>', 'Base URL to crawl', baseUrl)
-  .action(async (options) => {
-    console.log(chalk.blue('Starting complete crawl process...'));
-
-    try {
-      let spinner = ora('Phase 1: Initial Crawl (1 level deep)').start();
-      await initialCrawl(options.url, spinner);
-
-      let announce = [
-        '',
-        chalk.bold('───────────────────────────────'),
-        chalk.bold.blue('🚀 Phase 2 Begins: Level 2 Crawl'),
-        chalk.bold('───────────────────────────────'),
-      ];
-      console.log(announce.join('\n'));
-      spinner = ora('Phase 2: Deepening Crawl (first pass)').start();
-      await deepenCrawl(options.url, undefined, spinner);
-
-      announce = [
-        '',
-        chalk.bold('───────────────────────────────'),
-        chalk.bold.blue('🚀 Phase 3 Begins: Level 3 Crawl'),
-        chalk.bold('───────────────────────────────'),
-      ];
-      console.log(announce.join('\n'));
-      spinner = ora('Phase 3: Deepening Crawl (second pass)').start();
-      await deepenCrawl(options.url, undefined, spinner);
-
-      announce = [
-        '',
-        chalk.bold('───────────────────────────────'),
-        chalk.bold.magentaBright('🚀 Data Transformation Begins'),
-        chalk.bold('───────────────────────────────'),
-      ];
-      console.log(announce.join('\n'));
-      spinner = ora('Phase 4: Gathering Metadata').start();
-      await gatherMetadata(options.url, 20, spinner);
-
-      announce = [
-        '',
-        chalk.bold('───────────────────────────────'),
-        chalk.bold.magentaBright('🎨 CSS Extraction Begins'),
-        chalk.bold('───────────────────────────────'),
-      ];
-      console.log(announce.join('\n'));
-      spinner = ora('Phase 5: Extracting CSS Information').start();
-      await extractCss(options.url, spinner);
-
-      // Finalizing doesn't strictly need a spinner unless it takes time
-      console.log(chalk.blue('Finalizing results...'));
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      console.log(chalk.green.bold('✅ All operations completed successfully!'));
-      // Final completion message with styling
-      const completionBox = createSummaryBox(
-        'All operations completed successfully!',
-        [
-          '',
-          chalk.bold.green('✅ Complete Crawl Process Finished!'),
-          chalk.bold('═════════════════════════════════════'),
-          chalk.blue('All phases have been successfully completed:'),
-          chalk.yellow('  • Initial crawl'),
-          chalk.yellow('  • Two deepening passes'),
-          chalk.yellow('  • Metadata gathering'),
-          chalk.yellow('  • CSS extraction'),
-          '',
-          chalk.green('Results are available in: ') + chalk.bold.white('./output/'),
-          '',
-        ]);
-
-      console.log(completionBox);
-      console.log('npm run all complete.')
-      process.exit(1);
-    } catch (error) {
-      console.error(chalk.red(`\n❌ Operation failed: ${error.message}`));
-      console.error(error); // Log full error details
-      process.exit(1);
-    }
-  });
-
-// Default command if none provided
-if (process.argv.length <= 2) {
-  program.help();
+  return command;
 }
 
-program.parse();
+// Validation function
+function validateOptions(options) {
+  if (!options.url) {
+    logger.error('URL is required. Use -u or --url flag.');
+    process.exit(1);
+  }
+
+  try {
+    new URL(options.url);
+  } catch (e) {
+    logger.error(`Invalid URL format: ${options.url}`);
+    process.exit(1);
+  }
+
+  if (options.depth < 1 || options.depth > 10) {
+    logger.error('Depth must be between 1 and 10');
+    process.exit(1);
+  }
+
+  if (options.timeout < 1000 || options.timeout > 120000) {
+    logger.error('Timeout must be between 1000ms and 120000ms');
+    process.exit(1);
+  }
+
+  if (options.retries < 0 || options.retries > 10) {
+    logger.error('Retries must be between 0 and 10');
+    process.exit(1);
+  }
+}
+
+// Create output directory if it doesn't exist
+function ensureOutputDirectory(outputDir) {
+  if (!fs.existsSync(outputDir)) {
+    try {
+      fs.mkdirSync(outputDir, { recursive: true });
+      logger.info(`Created output directory: ${outputDir}`);
+    } catch (error) {
+      logger.error(`Failed to create output directory: ${error.message}`);
+      process.exit(1);
+    }
+  }
+}
+
+// Initial crawl command
+addCommonOptions(program.command('initial'))
+  .description('Run initial shallow crawl to discover site structure')
+  .action(async (options) => {
+    validateOptions(options);
+    ensureOutputDirectory(options.output);
+
+    const spinner = SpinnerManager.createGlobalSpinner('initial',`Starting initial crawl of ${chalk.bold(options.url)}`, 'dots');
+
+    try {
+      await initialCrawl(options.url, spinner);
+      logger.success('Initial crawl completed successfully');
+    } catch (error) {
+      spinner.fail(`Initial crawl failed: ${error.message}`);
+      logger.error(`Full error: ${error.stack}`);
+      process.exit(1);
+    }
+  });
+
+// Deepen crawl command
+addCommonOptions(program.command('deepen'))
+  .description('Crawl deeper levels based on discovered paths')
+  .action(async (options) => {
+    validateOptions(options);
+    ensureOutputDirectory(options.output);
+
+    const spinner = SpinnerManager.createGlobalSpinner('deepen',`Deepening crawl of ${chalk.bold(options.url)}`, 'dots');
+
+    try {
+      await deepenCrawl(options.url, options.depth, spinner);
+      logger.success('Deepen crawl completed successfully');
+    } catch (error) {
+      spinner.fail(`Deepen crawl failed: ${error.message}`);
+      logger.error(`Full error: ${error.stack}`);
+      process.exit(1);
+    }
+  });
+
+// Metadata gathering command
+addCommonOptions(program.command('metadata'))
+  .description('Gather metadata from discovered paths')
+  .action(async (options) => {
+    validateOptions(options);
+    ensureOutputDirectory(options.output);
+
+    const spinner = SpinnerManager.createGlobalSpinner('metadata',`Gathering metadata from ${chalk.bold(options.url)}`, 'dots');
+
+    try {
+      await gatherMetadata(options.url, spinner);
+      logger.success('Metadata gathering completed successfully');
+    } catch (error) {
+      spinner.fail(`Metadata gathering failed: ${error.message}`);
+      logger.error(`Full error: ${error.stack}`);
+      process.exit(1);
+    }
+  });
+
+// CSS extraction command
+addCommonOptions(program.command('extract'))
+  .description('Extract CSS and design tokens from crawled pages')
+  .action(async (options) => {
+    validateOptions(options);
+    ensureOutputDirectory(options.output);
+
+    const spinner = SpinnerManager.createGlobalSpinner('extract',`Extracting CSS from ${chalk.bold(options.url)}`, 'dots');
+
+    try {
+      await extractCss(options.url, spinner);
+      logger.success('CSS extraction completed successfully');
+    } catch (error) {
+      spinner.fail(`CSS extraction failed: ${error.message}`);
+      logger.error(`Full error: ${error.stack}`);
+      process.exit(1);
+    }
+  });
+
+// Complete pipeline command
+addCommonOptions(program.command('all'))
+  .description('Run complete crawl pipeline (initial -> deepen -> metadata -> extract)')
+  .action(async (options) => {
+    validateOptions(options);
+    ensureOutputDirectory(options.output);
+
+    const startTime = Date.now();
+
+    logger.info(`Starting complete pipeline for ${chalk.bold(options.url)}`);
+
+    try {
+      // Phase 1: Initial crawl
+      logger.info('Phase 1/4: Initial crawl');
+      const spinner1 = SpinnerManager.createGlobalSpinner('phase1', `Initial crawl of ${chalk.bold(options.url)}`, 'dots');
+      await initialCrawl(options.url, spinner1);
+
+      // Phase 2: Deepen crawl
+      logger.info('Phase 2/4: Deepen crawl');
+      const spinner2 = SpinnerManager.createGlobalSpinner('phase2', `Deepening crawl of ${chalk.bold(options.url)}`, 'dots');
+      await deepenCrawl(options.url, options.depth, spinner2);
+
+      // Phase 3: Metadata gathering
+      logger.info('Phase 3/4: Metadata gathering');
+      const spinner3 = SpinnerManager.createGlobalSpinner('phase3',`Gathering metadata from ${chalk.bold(options.url)}`, 'dots');
+      await gatherMetadata(options.url, spinner3);
+
+      // Phase 4: CSS extraction
+      logger.info('Phase 4/4: CSS extraction');
+      const spinner4 = SpinnerManager.createGlobalSpinner('phase4',`Extracting CSS from ${chalk.bold(options.url)}`, 'dots');
+      await extractCss(options.url, spinner4);
+
+      const endTime = Date.now();
+      const duration = ((endTime - startTime) / 1000).toFixed(2);
+
+      logger.success(`Complete pipeline finished in ${duration}s`);
+
+      // Create summary
+      const summary = createSummaryBox('Pipeline Complete', [
+        `URL: ${options.url}`,
+        `Duration: ${duration}s`,
+        `Output: ${options.output}`,
+      ]);
+
+      console.log('\n' + summary);
+
+    } catch (error) {
+      logger.error(`Pipeline failed: ${error.message}`);
+      logger.error(`Full error: ${error.stack}`);
+      process.exit(1);
+    }
+  });
+
+// Help command (default action when no command provided)
+program
+  .action(() => {
+    console.log(chalk.bold.blue('🔍 Site Crawler'));
+    console.log('A tool for crawling websites and extracting design tokens\n');
+    program.help();
+  });
+
+// Handle unknown commands
+program.on('command:*', () => {
+  logger.error(`Unknown command: ${program.args.join(' ')}`);
+  console.log('Available commands:');
+  program.help();
+  process.exit(1);
+});
+
+// Global error handling
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error(`Unhandled Rejection at: ${promise}, reason: ${reason}`);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (error) => {
+  logger.error(`Uncaught Exception: ${error.message}`);
+  logger.error(`Stack: ${error.stack}`);
+  process.exit(1);
+});
+
+// Parse command line arguments
+program.parse(process.argv);
+
+// If no arguments provided, show help
+if (!process.argv.slice(2).length) {
+  program.action(() => {
+    console.log(chalk.bold.blue('🔍 Site Crawler'));
+    console.log('A tool for crawling websites and extracting design tokens\n');
+    program.help();
+  });
+  program.parse(process.argv);
+}

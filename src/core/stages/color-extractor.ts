@@ -17,7 +17,7 @@ export class ColorExtractor {
                 this.fileSystem.mkdirSync(rawOutputDir, { recursive: true });
             }
         } catch (error) {
-            this.logger.error(`Failed to create output directory: ${error.message}`);
+            this.logger.error(`Failed to create output directory: ${error instanceof Error ? error.message : String(error)}`);
             throw error;
         }
 
@@ -60,7 +60,7 @@ export class ColorExtractor {
             this.fileSystem.writeFileSync(outputFile, JSON.stringify(colorTokens, null, 2));
             this.logger.log(`Color extraction completed. Found ${colorTokens.length} colors. Results saved to ${outputFile}`);
         } catch (error) {
-            this.logger.error(`Failed to save results: ${error.message}`);
+            this.logger.error(`Failed to save results: ${error instanceof Error ? error.message : String(error)}`);
             throw error;
         }
 
@@ -68,7 +68,9 @@ export class ColorExtractor {
     }
 
     private processColors(colors: string[] | undefined, category: string, source: string, config: CrawlConfig, colorMap: Map<string, any>): void {
-        if (colors && config.extractors?.colors?.[`include${category.charAt(0).toUpperCase() + category.slice(1)}Colors`]) {
+        const colorConfig = config.extractors?.colors;
+        const categoryKey = `include${category.charAt(0).toUpperCase() + category.slice(1)}Colors` as keyof typeof colorConfig;
+        if (colors && colorConfig?.[categoryKey]) {
             for (const color of colors) {
                 this.addToColorMap(colorMap, color, category, source);
             }

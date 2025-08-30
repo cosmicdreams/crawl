@@ -1,5 +1,5 @@
 // src/ui/components/TokenCard.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import TokenCard from './TokenCard';
 
 const meta = {

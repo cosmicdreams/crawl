@@ -7,10 +7,20 @@
 
 /* eslint-disable node/no-missing-import */
 /* eslint-disable import/no-unresolved */
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
+import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
+
+const dirname =
+  typeof __dirname !== 'undefined' ? __dirname : path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig({
-  test: {
+  // Configure projects for different test types
+  projects: [
+    // Main project configuration
+    {
+      test: {
     // Test environment
     environment: 'jsdom',
     globals: true,
@@ -78,18 +88,100 @@ export default defineConfig({
     globalSetup: [],
     setupFiles: ['./src/test-setup.ts'],
 
-    // Test timeout in milliseconds
-    testTimeout: 10000,
+    // Performance-optimized timeout configuration
+    testTimeout: 8000, // Reduced from 10s for faster feedback
+    hookTimeout: 5000, // Prevent hanging setup/teardown
 
-    // Watch mode configuration
-    watchExclude: ['**/node_modules/**', '**/results/**', '**/coverage/**'],
+    // Watch mode configuration with performance optimizations
+    watchExclude: [
+      '**/node_modules/**', 
+      '**/results/**', 
+      '**/coverage/**',
+      '**/dist/**',
+      '**/.git/**',
+      '**/backup/**'
+    ],
 
-    // Parallel test execution
+    // Optimized parallel test execution
     pool: 'threads',
     poolOptions: {
       threads: {
         singleThread: false,
+        minThreads: 1,
+        maxThreads: Math.min(4, Math.max(1, Math.floor(require('os').cpus().length / 2))), // Smart CPU usage
+        useAtomics: true, // Enable atomic operations for better performance
+      },
+      // Memory management
+      isolate: false, // Share context between threads for performance
+    },
+
+    // Enhanced ESM and hoisting configuration
+    hoistMocks: {
+      vi: ['vitest'],
+      external: ['playwright', 'jsdom'] // Hoist heavy dependencies
+    },
+    
+    // Optimized server configuration for better ESM handling
+    server: {
+      deps: {
+        inline: [
+          // Inline dependencies that have issues with ESM
+          'playwright',
+          '@testing-library/react',
+          '@testing-library/jest-dom'
+        ],
+        // Performance optimization: external heavy deps
+        external: ['react', 'react-dom']
+      },
+      // Preload commonly used modules
+      preTransformRequests: false, // Disable for faster startup
+    },
+
+    // Performance and memory optimizations
+    experimentalVmThreads: true,
+    maxConcurrency: 8, // Limit concurrent tests to prevent memory issues
+    
+    // Optimize test environment for performance
+    environmentOptions: {
+      jsdom: {
+        resources: 'usable',
+        runScripts: 'dangerously', // Faster script execution
+        pretendToBeVisual: false, // Skip visual rendering for performance
+      }
+    },
+
+    // Memory management configuration
+    memoryLimit: '512M', // Prevent memory leaks
+    
+    // Fast test discovery
+    cache: {
+      dir: './node_modules/.cache/vitest', // Cache test files
+    },
+    
+    // Optimized reporter for CI/CD
+    reporter: process.env.CI ? ['json', 'github-actions'] : ['default'],
+    
+    // Performance monitoring
+    benchmark: {
+      outputFile: './test-results/benchmark.json',
+      reporters: ['default', 'json']
+    }
+    },
+    // Storybook test project
+    {
+      plugins: [
+        storybookTest({ configDir: path.join(dirname, '.storybook') }),
+      ],
+      test: {
+        name: 'storybook',
+        browser: {
+          enabled: true,
+          headless: true,
+          provider: 'playwright',
+          instances: [{ browser: 'chromium' }]
+        },
+        setupFiles: ['.storybook/vitest.setup.ts'],
       },
     },
-  },
+  ],
 });

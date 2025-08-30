@@ -1,5 +1,5 @@
 // src/ui/components/flow/PipelineFlow.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import { ReactFlowProvider } from 'reactflow';
 import PipelineFlow from './PipelineFlow';
 

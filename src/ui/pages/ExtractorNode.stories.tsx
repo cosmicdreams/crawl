@@ -1,7 +1,7 @@
 // src/ui/nodes/ExtractorNode.stories.tsx
 // Using ESM syntax
 import React from 'react';
-import { Story, Meta } from '@storybook/react';
+import { Story, Meta } from '@storybook/react-vite';
 import ExtractorNode, { ExtractorNodeProps } from './ExtractorNode';
 
 export default {

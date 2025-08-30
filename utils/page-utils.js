@@ -6,17 +6,21 @@ import { isFileUrl } from './url-utils.js';
 /**
  * Extract body classes from a page
  * @param {import('playwright').Page} page - Playwright page object
- * @returns {Promise<string>} - Body class string
+ * @returns {Promise<string[]>} - Array of body class names
  */
 async function extractBodyClasses(page) {
   try {
     return await page.evaluate(() => {
       const body = document.querySelector('body');
-      return body ? body.className : '';
+      if (!body || !body.className) {
+        return [];
+      }
+      // Split className string by whitespace and filter out empty strings
+      return body.className.split(/\s+/).filter(cls => cls.trim().length > 0);
     });
   } catch (error) {
     console.error(`Body class extraction error: ${error.message}`);
-    return 'ERROR-EXTRACTING-BODY-CLASSES';
+    return [];
   }
 }
 

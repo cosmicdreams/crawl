@@ -206,6 +206,18 @@ class SpinnerManager {
       warning: (msg) => this.warning(id, msg),
       error: (msg) => this.error(id, msg),
       fail: (msg) => this.fail(id, msg),
+      succeed: (msg) => this.succeed(id, msg),
+      stopAndPersist: (options) => {
+        if (activeSpinner && currentId === id) {
+          if (options && options.symbol && options.text) {
+            activeSpinner.stopAndPersist(options);
+          } else {
+            activeSpinner.succeed(activeSpinner.text);
+          }
+          activeSpinner = null;
+          currentId = null;
+        }
+      },
     };
   }
 }

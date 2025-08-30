@@ -192,7 +192,7 @@ class Logger {
 
 1. **Short Term:**
    - Implement configuration validation
-   - Add structured logging
+   - Add structured logging using pino
    - Create error hierarchy
    - Add more comprehensive tests
 

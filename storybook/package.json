@@ -1,0 +1,68 @@
+{
+  "name": "site-crawler-styleguide",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A styleguide visualizer for extracted CSS properties",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:e2e": "playwright test"
+  },
+  "keywords": [
+    "storybook",
+    "styleguide",
+    "css",
+    "design",
+    "components"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@chromatic-com/storybook": "next",
+    "@eslint/js": "^9.22.0",
+    "@modyfi/vite-plugin-yaml": "^1.1.1",
+    "@storybook/addon-a11y": "^9.0.0-beta.1",
+    "@storybook/addon-docs": "^9.0.0-beta.1",
+    "@storybook/addon-onboarding": "^9.0.0-beta.1",
+    "@storybook/addon-vitest": "^9.0.0-beta.1",
+    "@storybook/react-vite": "^9.0.0-beta.1",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/browser": "^3.1.1",
+    "@vitest/coverage-v8": "^3.1.1",
+    "eslint": "^9.22.0",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.19",
+    "eslint-plugin-storybook": "^9.0.0-beta.1",
+    "globals": "^16.0.0",
+    "playwright": "^1.52.0",
+    "storybook": "^9.0.0-beta.1",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.26.1",
+    "vite": "^6.3.1",
+    "vite-plugin-twig-drupal": "^1.6.0",
+    "vitest": "^3.1.1"
+  },
+  "eslintConfig": {
+    "extends": [
+      "plugin:storybook/recommended"
+    ]
+  },
+  "overrides": {
+    "storybook": "$storybook"
+  }
+}

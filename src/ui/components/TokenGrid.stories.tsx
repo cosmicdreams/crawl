@@ -1,5 +1,5 @@
 // src/ui/components/TokenGrid.stories.tsx
-import type { Meta, StoryObj } from '@storybook/react';
+import type { Meta, StoryObj } from '@storybook/react-vite';
 import TokenGrid from './TokenGrid';
 import { DesignToken } from '../../core/types.js';
 
