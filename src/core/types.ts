@@ -116,6 +116,14 @@ export interface PageInfo {
     contentType: string;
     /** Path to screenshot file, if captured */
     screenshot?: string;
+    /** Animation data extracted from the page */
+    animations?: AnimationData[];
+    /** Typography data extracted from the page */
+    typography?: {
+        headings?: TypographyData[];
+        bodyText?: TypographyData[];
+        specialText?: TypographyData[];
+    };
 }
 
 /**
@@ -138,4 +146,60 @@ export interface DesignToken {
     source?: string;
     /** Additional type-specific properties */
     properties?: Record<string, any>;
+}
+
+/**
+ * Animation data extracted from CSS styles
+ */
+export interface AnimationData {
+    /** Animation name */
+    name: string;
+    /** Animation value/CSS */
+    value?: string;
+    /** Usage count */
+    count?: number;
+    /** Total usage count */
+    usageCount?: number;
+    /** Source URLs */
+    sources?: string[];
+    /** Animation duration */
+    duration?: string;
+    /** Timing function */
+    timingFunction?: string;
+    /** Animation delay */
+    delay?: string;
+    /** Iteration count */
+    iterationCount?: string;
+    /** Animation direction */
+    direction?: string;
+    /** Fill mode */
+    fillMode?: string;
+}
+
+/**
+ * Typography data extracted from computed styles
+ */
+export interface TypographyData {
+    /** Font family */
+    fontFamily: string;
+    /** Font size */
+    fontSize: string;
+    /** Font weight */
+    fontWeight: string;
+    /** Line height */
+    lineHeight?: string;
+    /** Letter spacing */
+    letterSpacing?: string;
+    /** Text color */
+    color?: string;
+    /** Typography category */
+    category?: string;
+    /** HTML element */
+    element?: string;
+    /** Usage count */
+    count?: number;
+    /** Total usage count */
+    usageCount?: number;
+    /** Source URLs */
+    sources?: string[];
 }

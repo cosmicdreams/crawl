@@ -1,0 +1,50 @@
+{
+  "timestamp": "2025-09-01T16:36:25.726Z",
+  "validation_type": "quick",
+  "reference_performance": {
+    "pncb_site": "32.15s (70% improvement)",
+    "target": "50% minimum improvement"
+  },
+  "summary": {
+    "tests_run": 3,
+    "successful_tests": 3,
+    "average_improvement": "-160.2%",
+    "target_met": false
+  },
+  "detailed_results": [
+    {
+      "test_name": "small-test",
+      "test_description": "Small site: 5 pages",
+      "optimized_duration": 3.998,
+      "sequential_duration": 0.651,
+      "improvement": -514.1321044546851,
+      "absolute_improvement": -3.3470000000000004,
+      "success": true,
+      "expected_range": "5-15s",
+      "meets_target": false
+    },
+    {
+      "test_name": "medium-test",
+      "test_description": "Medium site: 15 pages",
+      "optimized_duration": 1.189,
+      "sequential_duration": 0.927,
+      "improvement": -28.26321467098166,
+      "absolute_improvement": -0.262,
+      "success": true,
+      "expected_range": "15-35s",
+      "meets_target": false
+    },
+    {
+      "test_name": "real-world",
+      "test_description": "Real site: vitest.dev",
+      "optimized_duration": 3.18,
+      "sequential_duration": 8.313,
+      "improvement": 61.746661854926025,
+      "absolute_improvement": 5.133000000000001,
+      "success": true,
+      "expected_range": "20-60s",
+      "meets_target": true
+    }
+  ],
+  "conclusion": "Quick validation indicates potential issues requiring investigation"
+}

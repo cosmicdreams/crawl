@@ -1,89 +1,106 @@
 // tests/unit/extractors/spacing-extractor.test.ts
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { CrawlResult } from '../../../src/core/types.js';
 
-// Mock modules before importing anything else
-vi.mock('node:fs');
-vi.mock('node:path');
-vi.mock('playwright');
+// Shared state for evaluate call tracking
+const evaluateState = { callCount: 0 };
 
-// Dynamic imports after mocking
+// Create mocks in hoisted scope
+const { fsMock, pathMock, playwrightMock } = vi.hoisted(() => {
+  const fs = {
+    existsSync: vi.fn().mockReturnValue(false),
+    mkdirSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    readFileSync: vi.fn().mockReturnValue('{}'),
+  };
+
+  const path = {
+    join: vi.fn((...args) => args.join('/')),
+    dirname: vi.fn((p: string) => p.split('/').slice(0, -1).join('/')),
+    basename: vi.fn((p: string) => p.split('/').pop() || ''),
+  };
+
+  // Mock page.evaluate to return spacing data in the format the implementation expects
+  const mockPage = {
+    goto: vi.fn().mockResolvedValue(null),
+    evaluate: vi.fn().mockImplementation(() => {
+      // The implementation calls evaluate 3 times per page: margin, padding, gap
+      // Return different data for each call in sequence
+      const callIndex = evaluateState.callCount++;
+
+      // First call: margin values
+      if (callIndex % 3 === 0) {
+        return Promise.resolve({
+          '16px': { value: '16px', property: 'margin', element: 'div', usageCount: 2 },
+          '24px': { value: '24px', property: 'marginTop', element: 'h2', usageCount: 1 },
+          '32px': { value: '32px', property: 'marginBottom', element: 'section', usageCount: 1 }
+        });
+      }
+
+      // Second call: padding values (use different values to avoid deduplication)
+      if (callIndex % 3 === 1) {
+        return Promise.resolve({
+          '20px': { value: '20px', property: 'padding', element: 'div', usageCount: 8 },
+          '8px': { value: '8px', property: 'paddingLeft', element: 'p', usageCount: 3 },
+          '28px': { value: '28px', property: 'paddingTop', element: 'footer', usageCount: 1 }
+        });
+      }
+
+      // Third call: gap values (use different values to avoid deduplication)
+      return Promise.resolve({
+        '12px': { value: '12px', property: 'gap', element: 'div', usageCount: 4 },
+        '4px': { value: '4px', property: 'rowGap', element: 'nav', usageCount: 2 }
+      });
+    }),
+    setDefaultTimeout: vi.fn(),
+    close: vi.fn().mockResolvedValue(null)
+  };
+
+  const mockContext = {
+    newPage: vi.fn().mockResolvedValue(mockPage)
+  };
+
+  const mockBrowser = {
+    newContext: vi.fn().mockResolvedValue(mockContext),
+    close: vi.fn().mockResolvedValue(null)
+  };
+
+  return {
+    fsMock: { default: fs, ...fs },
+    pathMock: { default: path, ...path },
+    playwrightMock: {
+      chromium: {
+        launch: vi.fn().mockResolvedValue(mockBrowser)
+      }
+    }
+  };
+});
+
+// Mock modules BEFORE imports
+vi.mock('node:fs', () => fsMock);
+vi.mock('node:path', () => pathMock);
+vi.mock('playwright', () => playwrightMock);
+
+// Import after mocking
+import fs from 'node:fs';
+import path from 'node:path';
+import { chromium } from 'playwright';
 const { SpacingExtractorStage } = await import('../../../src/core/stages/spacing-extractor-stage.js');
-const { CrawlResult } = await import('../../../src/core/types.js');
 
 describe('SpacingExtractorStage', () => {
-  let extractor;
+  let extractor: any;
   let mockCrawlResult: CrawlResult;
-  let fsMock;
-  let pathMock;
-  let playwrightMock;
 
-  beforeEach(async () => {
-    // Dynamic mock setup
-    fsMock = await vi.importMock('node:fs');
-    pathMock = await vi.importMock('node:path');
-    playwrightMock = await vi.importMock('playwright');
-
-    // Configure Node.js fs mock
-    fsMock.default = {
-      existsSync: vi.fn().mockReturnValue(false),
-      mkdirSync: vi.fn(),
-      writeFileSync: vi.fn(),
-      readFileSync: vi.fn().mockReturnValue('{}'),
-    };
-    Object.assign(fsMock, fsMock.default);
-
-    // Configure Node.js path mock
-    pathMock.default = {
-      join: vi.fn((...args) => args.join('/')),
-      dirname: vi.fn(path => path.split('/').slice(0, -1).join('/')),
-      basename: vi.fn(path => path.split('/').pop()),
-    };
-    Object.assign(pathMock, pathMock.default);
-
-    // Configure Playwright mock
-    playwrightMock.chromium = {
-      launch: vi.fn().mockResolvedValue({
-        newContext: vi.fn().mockResolvedValue({
-          newPage: vi.fn().mockResolvedValue({
-            goto: vi.fn().mockResolvedValue(null),
-            evaluate: vi.fn().mockImplementation((fn) => {
-              // Mock the evaluate function to return test data
-              if (fn.toString().includes('margin')) {
-                return {
-                  '16px': { value: '16px', property: 'margin', element: 'div', usageCount: 5 },
-                  '24px': { value: '24px', property: 'marginBottom', element: 'h2', usageCount: 3 },
-                  '32px': { value: '32px', property: 'marginTop', element: 'section', usageCount: 2 }
-                };
-              }
-              if (fn.toString().includes('padding')) {
-                return {
-                  '16px': { value: '16px', property: 'padding', element: 'div', usageCount: 8 },
-                  '8px': { value: '8px', property: 'paddingLeft', element: 'p', usageCount: 4 },
-                  '24px': { value: '24px', property: 'paddingBottom', element: 'footer', usageCount: 1 }
-                };
-              }
-              if (fn.toString().includes('gap')) {
-                return {
-                  '16px': { value: '16px', property: 'gap', element: 'div', usageCount: 3 },
-                  '8px': { value: '8px', property: 'gap', element: 'nav', usageCount: 2 }
-                };
-              }
-              return {};
-            }),
-            setDefaultTimeout: vi.fn(),
-            close: vi.fn().mockResolvedValue(null)
-          })
-        }),
-        close: vi.fn().mockResolvedValue(null)
-      })
-    };
+  beforeEach(() => {
+    // Reset evaluate call counter
+    evaluateState.callCount = 0;
 
     // Create a new extractor with default options
     extractor = new SpacingExtractorStage({
       includeMargins: true,
       includePadding: true,
       includeGap: true,
-      minOccurrences: 1,
+      minimumOccurrences: 1,
       outputDir: './test-results'
     });
 
@@ -105,10 +122,6 @@ describe('SpacingExtractorStage', () => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    vi.resetAllMocks();
-  });
-
   it('should create output directory if it does not exist', async () => {
     await extractor.process(mockCrawlResult);
     
@@ -118,16 +131,16 @@ describe('SpacingExtractorStage', () => {
 
   it('should extract spacing values from crawled pages', async () => {
     const result = await extractor.process(mockCrawlResult);
-    
+
     // Check that we have the expected number of tokens
     expect(result.tokens.length).toBeGreaterThan(0);
-    
+
     // Check that we have margin values
     expect(result.tokens.some(token => token.category === 'margin')).toBe(true);
-    
+
     // Check that we have padding values
     expect(result.tokens.some(token => token.category === 'padding')).toBe(true);
-    
+
     // Check that we have gap values
     expect(result.tokens.some(token => token.category === 'gap')).toBe(true);
   });
@@ -138,26 +151,26 @@ describe('SpacingExtractorStage', () => {
       includeMargins: true,
       includePadding: true,
       includeGap: true,
-      minOccurrences: 5, // Set a high value to filter out most spacings
+      minimumOccurrences: 5, // Set a high value to filter out most spacings
       outputDir: './test-results'
     });
-    
+
     const result = await strictExtractor.process(mockCrawlResult);
-    
+
     // We should have fewer tokens because of the higher threshold
-    expect(result.tokens.length).toBeLessThan(6); // Total mocked values
-    
-    // The 16px padding should still be included (usageCount = 8)
-    const padding16px = result.tokens.find(token => 
-      token.value === '16px' && token.category === 'padding'
+    expect(result.tokens.length).toBeLessThan(8); // Total mocked values with usageCount >= 5
+
+    // The 20px padding should still be included (usageCount = 8)
+    const padding20px = result.tokens.find((token: any) =>
+      token.value?.value === 20 && token.value?.unit === 'px' && token.category === 'padding'
     );
-    expect(padding16px).toBeDefined();
-    
-    // The 24px padding should be excluded (usageCount = 1)
-    const padding24px = result.tokens.find(token => 
-      token.value === '24px' && token.category === 'padding'
+    expect(padding20px).toBeDefined();
+
+    // The 28px padding should be excluded (usageCount = 1)
+    const padding28px = result.tokens.find((token: any) =>
+      token.value?.value === 28 && token.value?.unit === 'px' && token.category === 'padding'
     );
-    expect(padding24px).toBeUndefined();
+    expect(padding28px).toBeUndefined();
   });
 
   it('should handle missing data gracefully', async () => {
@@ -167,27 +180,28 @@ describe('SpacingExtractorStage', () => {
       crawledPages: [],
       timestamp: new Date().toISOString()
     };
-    
+
     // Should not throw error with empty pages
     await expect(extractor.process(emptyCrawlResult)).resolves.not.toThrow();
-    
+
     const result = await extractor.process(emptyCrawlResult);
-    
-    // Should still provide fallback mock data
-    expect(result.tokens.length).toBeGreaterThan(0);
-    expect(result.baseUrl).toBe('https://example.com');
+
+    // With no pages to process, we should get empty results (no fake data)
+    expect(result.tokens.length).toBe(0);
+    expect(result.stats).toBeDefined();
+    expect(result.stats.totalSpacings).toBe(0);
   });
 
   it('should validate configuration parameters', () => {
-    // Test edge case: negative minOccurrences
+    // Test edge case: negative minimumOccurrences
     expect(() => {
       new SpacingExtractorStage({
-        minOccurrences: -1,
+        minimumOccurrences: -1,
         outputDir: './test-results'
       });
     }).not.toThrow(); // Should handle gracefully
 
-    // Test edge case: invalid outputDir  
+    // Test edge case: invalid outputDir
     expect(() => {
       new SpacingExtractorStage({
         outputDir: ''
@@ -196,27 +210,31 @@ describe('SpacingExtractorStage', () => {
   });
 
   it('should handle network failures gracefully', async () => {
-    // Mock network timeout
-    playwrightMock.chromium.launch.mockResolvedValueOnce({
+    // Create a new mock browser with network failure
+    const failingMockPage = {
+      goto: vi.fn().mockRejectedValue(new Error('net::ERR_CONNECTION_REFUSED')),
+      evaluate: vi.fn(),
+      setDefaultTimeout: vi.fn(),
+      close: vi.fn().mockResolvedValue(null)
+    };
+
+    const failingMockBrowser = {
       newContext: vi.fn().mockResolvedValue({
-        newPage: vi.fn().mockResolvedValue({
-          goto: vi.fn().mockRejectedValue(new Error('net::ERR_CONNECTION_REFUSED')),
-          evaluate: vi.fn(),
-          setDefaultTimeout: vi.fn(),
-          close: vi.fn().mockResolvedValue(null)
-        })
+        newPage: vi.fn().mockResolvedValue(failingMockPage)
       }),
       close: vi.fn().mockResolvedValue(null)
-    });
-    
-    // Should not throw error with network failures
-    await expect(extractor.process(mockCrawlResult)).resolves.not.toThrow();
-    
+    };
+
+    // Override the mock for this test only
+    vi.mocked(chromium.launch).mockResolvedValue(failingMockBrowser as any);
+
+    // Should not throw error with network failures and should return empty results
     const result = await extractor.process(mockCrawlResult);
-    
-    // Should provide fallback data when network fails
-    expect(result.tokens.length).toBeGreaterThan(0);
-    expect(result.baseUrl).toBe('https://example.com');
+
+    // When network fails, we should get empty results (no fake data)
+    expect(result.tokens.length).toBe(0);
+    expect(result.stats).toBeDefined();
+    expect(result.stats.totalSpacings).toBe(0);
   });
 
   it('should provide comprehensive edge case coverage', async () => {

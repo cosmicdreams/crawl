@@ -1,0 +1,10 @@
+{
+  "base_url": "https://example.com",
+  "name": "Website Analysis",
+  "crawl_settings": {
+    "max_depth": 3,
+    "batch_size": 20,
+    "max_retries": 2,
+    "timeout": 45000
+  }
+}

@@ -1,131 +1,128 @@
 // src/core/stages/typography-extractor.ts
-import { CrawlConfig, DesignToken } from '../types.js';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+// Using ESM syntax
+import { PipelineStage } from '../pipeline.js';
+import { CrawlResult } from '../types.js';
+import { logger } from '../../utils/logger.js';
+import { Browser, chromium } from 'playwright';
+import fs from 'node:fs';
+import path from 'node:path';
+import { convertCSSPropertiesToTypography } from '../tokens/converters/value-converters.js';
+import { TypographyValue } from '../tokens/types/composites.js';
+import { ExtractedTokenData } from '../tokens/generators/spec-generator.js';
 
-export class TypographyExtractor {
-    async process(crawlResults: any, config: CrawlConfig): Promise<DesignToken[]> {
-        console.log(`Extracting typography from ${crawlResults.crawledPages?.length || 0} pages`);
+interface TypographyExtractorOptions {
+    includeHeadings: boolean;
+    includeBodyText: boolean;
+    includeSpecialText: boolean;
+    minimumOccurrences: number;
+    outputDir?: string;
+}
 
-        const outputDir = config.outputDir || './results';
+interface TypographyExtractionResult {
+    tokens: ExtractedTokenData[];
+    stats: {
+        totalStyles: number;
+        uniqueStyles: number;
+        headingStyles: number;
+        bodyStyles: number;
+        specialStyles: number;
+    };
+}
+
+interface ExtractedTypography {
+    cssProperties: {
+        fontFamily: string;
+        fontSize: string;
+        fontWeight: string;
+        lineHeight: string;
+        letterSpacing?: string;
+    };
+    specValue: TypographyValue;     // Spec-compliant TypographyValue object
+    source: string;
+    element: string;
+    usageCount: number;
+    category?: string;
+    name?: string;
+    sourceUrls: string[];
+}
+
+export class TypographyExtractor implements PipelineStage<CrawlResult, TypographyExtractionResult> {
+    name = 'typography-extractor';
+
+    constructor(private options: TypographyExtractorOptions = {
+        includeHeadings: true,
+        includeBodyText: true,
+        includeSpecialText: true,
+        minimumOccurrences: 2,
+        outputDir: './results'
+    }) {}
+
+    async process(input: CrawlResult): Promise<TypographyExtractionResult> {
+        logger.info('Extracting typography', { pageCount: input.crawledPages?.length || 0 });
+
+        const outputDir = this.options.outputDir || './results';
         const rawOutputDir = path.join(outputDir, 'raw');
 
         if (!fs.existsSync(rawOutputDir)) {
             fs.mkdirSync(rawOutputDir, { recursive: true });
         }
 
-        // Process the typography data from crawl results
-        const typographyTokens: DesignToken[] = [];
-        const typographyMap = new Map<string, any>();
+        const browser = await chromium.launch();
+        const typographyMap = new Map<string, ExtractedTypography>();
 
-        // Extract typography data from crawl results
-        for (const pageInfo of crawlResults.crawledPages || []) {
-            if (pageInfo.typography) {
-                // Process heading styles
-                if (config.extractors?.typography?.includeHeadings && pageInfo.typography.headings) {
-                    for (const item of pageInfo.typography.headings) {
-                        this.addToTypographyMap(typographyMap, item, 'heading', pageInfo.url);
-                    }
-                }
+        try {
+            const context = await browser.newContext();
+            const page = await context.newPage();
 
-                // Process body text styles
-                if (config.extractors?.typography?.includeBodyText && pageInfo.typography.bodyText) {
-                    for (const item of pageInfo.typography.bodyText) {
-                        this.addToTypographyMap(typographyMap, item, 'body', pageInfo.url);
-                    }
-                }
+            for (const pageInfo of input.crawledPages || []) {
+                console.log(`Extracting typography from ${pageInfo.url}`);
 
-                // Process special text styles
-                if (config.extractors?.typography?.includeSpecialText && pageInfo.typography.specialText) {
-                    for (const item of pageInfo.typography.specialText) {
-                        this.addToTypographyMap(typographyMap, item, 'special', pageInfo.url);
+                try {
+                    await page.goto(pageInfo.url, { waitUntil: 'domcontentloaded' });
+
+                    // Extract heading styles
+                    if (this.options.includeHeadings) {
+                        const headingStyles = await this.extractHeadingStyles(page);
+                        this.addToTypographyMap(typographyMap, headingStyles, 'heading', pageInfo.url);
                     }
+
+                    // Extract body text styles
+                    if (this.options.includeBodyText) {
+                        const bodyStyles = await this.extractBodyTextStyles(page);
+                        this.addToTypographyMap(typographyMap, bodyStyles, 'body', pageInfo.url);
+                    }
+
+                    // Extract special text styles
+                    if (this.options.includeSpecialText) {
+                        const specialStyles = await this.extractSpecialTextStyles(page);
+                        this.addToTypographyMap(typographyMap, specialStyles, 'special', pageInfo.url);
+                    }
+
+                } catch (error) {
+                    console.error(`Error extracting typography from ${pageInfo.url}:`, error);
                 }
             }
+        } finally {
+            await browser.close();
         }
 
-        // If no typography styles were found, use mock data
-        if (typographyMap.size === 0) {
-            console.log('No typography found, using mock data');
-            const mockTypography = [
-                {
-                    fontFamily: 'Arial, sans-serif',
-                    fontSize: '2.5rem',  // Match the test's expected value
-                    fontWeight: '700',
-                    lineHeight: '1.2',
-                    letterSpacing: 'normal',
-                    category: 'heading',
-                    element: 'h1',
-                    count: 2  // Used on both pages
-                },
-                {
-                    fontFamily: 'Arial, sans-serif',
-                    fontSize: '2rem',
-                    fontWeight: '700',
-                    lineHeight: '1.3',
-                    letterSpacing: 'normal',
-                    category: 'heading',
-                    element: 'h2',
-                    count: 1
-                },
-                {
-                    fontFamily: 'Arial, sans-serif',
-                    fontSize: '1.75rem',  // Match the test's expected value
-                    fontWeight: '600',
-                    lineHeight: '1.4',
-                    letterSpacing: 'normal',
-                    category: 'heading',
-                    element: 'h3',
-                    count: 1
-                },
-                {
-                    fontFamily: 'Arial, sans-serif',
-                    fontSize: '1rem',  // Match the test's expected value
-                    fontWeight: '400',
-                    lineHeight: '1.5',
-                    letterSpacing: 'normal',
-                    category: 'body',
-                    element: 'p',
-                    count: 1
-                },
-                {
-                    fontFamily: 'Arial, sans-serif',
-                    fontSize: '0.875rem',
-                    fontWeight: '400',
-                    lineHeight: '1.5',
-                    letterSpacing: 'normal',
-                    category: 'body',
-                    element: 'small',
-                    count: 1
-                }
-            ];
+        // Convert the typography map to spec-compliant design tokens
+        const typographyTokens: ExtractedTokenData[] = [];
 
-            for (const item of mockTypography) {
-                this.addToTypographyMap(typographyMap, item, item.category, 'mock-data');
-            }
-        }
+        for (const [key, typographyInfo] of typographyMap.entries()) {
+            if (typographyInfo.usageCount >= this.options.minimumOccurrences) {
+                // Generate a name for the typography style if not already set
+                const name = typographyInfo.name || this.generateTypographyName(typographyInfo);
 
-        // Convert the typography map to design tokens
-        for (const [key, info] of typographyMap.entries()) {
-            const minOccurrences = config.extractors?.typography?.minOccurrences || 1;
-
-            if (info.usageCount >= minOccurrences) {
                 typographyTokens.push({
-                    name: this.generateTypographyName(info),
-                    value: this.generateTypographyValue(info),
-                    type: 'typography' as const,
-                    category: info.category,
-                    description: `Extracted from ${info.sources.join(', ')}`,
-                    usageCount: info.usageCount,
-                    source: info.sources.join(', '),
-                    properties: {  // This is a custom property not in the DesignToken type
-                        fontFamily: info.fontFamily,
-                        fontSize: info.fontSize,
-                        fontWeight: info.fontWeight,
-                        lineHeight: info.lineHeight,
-                        letterSpacing: info.letterSpacing,
-                        element: info.element
-                    }
+                    type: 'typography',
+                    name,
+                    value: typographyInfo.specValue,  // Spec-compliant TypographyValue object
+                    category: typographyInfo.category,
+                    description: `${typographyInfo.category || 'Typography'} extracted from ${typographyInfo.sourceUrls.length} page(s)`,
+                    usageCount: typographyInfo.usageCount,
+                    source: typographyInfo.source,
+                    sourceUrls: typographyInfo.sourceUrls
                 });
             }
         }
@@ -136,71 +133,156 @@ export class TypographyExtractor {
         // Save the results
         const outputFile = path.join(rawOutputDir, 'typography-analysis.json');
         fs.writeFileSync(outputFile, JSON.stringify(typographyTokens, null, 2));
-        console.log(`Typography extraction completed. Found ${typographyTokens.length} styles. Results saved to ${outputFile}`);
+        console.log(`Typography extraction completed. Found ${typographyTokens.length} typography styles. Results saved to ${outputFile}`);
 
-        return typographyTokens;
+        return {
+            tokens: typographyTokens,
+            stats: {
+                totalStyles: typographyMap.size,
+                uniqueStyles: typographyTokens.length,
+                headingStyles: typographyTokens.filter(t => t.category === 'heading').length,
+                bodyStyles: typographyTokens.filter(t => t.category === 'body').length,
+                specialStyles: typographyTokens.filter(t => t.category === 'special').length
+            }
+        };
+    }
+
+    private async extractHeadingStyles(page: any): Promise<Record<string, any>> {
+        return await page.evaluate(() => {
+            const styles = new Map<string, any>();
+            const headings = document.querySelectorAll('h1, h2, h3, h4, h5, h6');
+
+            headings.forEach(el => {
+                const style = window.getComputedStyle(el);
+                const key = `${el.tagName}-${style.fontFamily}-${style.fontSize}-${style.fontWeight}`;
+
+                if (!styles.has(key)) {
+                    styles.set(key, {
+                        fontFamily: style.fontFamily,
+                        fontSize: style.fontSize,
+                        fontWeight: style.fontWeight,
+                        lineHeight: style.lineHeight,
+                        letterSpacing: style.letterSpacing,
+                        element: el.tagName.toLowerCase()
+                    });
+                }
+            });
+
+            return Object.fromEntries(styles);
+        });
+    }
+
+    private async extractBodyTextStyles(page: any): Promise<Record<string, any>> {
+        return await page.evaluate(() => {
+            const styles = new Map<string, any>();
+            const bodyElements = document.querySelectorAll('p, span, div, a, li');
+
+            bodyElements.forEach(el => {
+                const style = window.getComputedStyle(el);
+                const key = `${el.tagName}-${style.fontFamily}-${style.fontSize}-${style.fontWeight}`;
+
+                if (!styles.has(key)) {
+                    styles.set(key, {
+                        fontFamily: style.fontFamily,
+                        fontSize: style.fontSize,
+                        fontWeight: style.fontWeight,
+                        lineHeight: style.lineHeight,
+                        letterSpacing: style.letterSpacing,
+                        element: el.tagName.toLowerCase()
+                    });
+                }
+            });
+
+            return Object.fromEntries(styles);
+        });
+    }
+
+    private async extractSpecialTextStyles(page: any): Promise<Record<string, any>> {
+        return await page.evaluate(() => {
+            const styles = new Map<string, any>();
+            const specialElements = document.querySelectorAll('code, pre, blockquote, em, strong, mark');
+
+            specialElements.forEach(el => {
+                const style = window.getComputedStyle(el);
+                const key = `${el.tagName}-${style.fontFamily}-${style.fontSize}-${style.fontWeight}`;
+
+                if (!styles.has(key)) {
+                    styles.set(key, {
+                        fontFamily: style.fontFamily,
+                        fontSize: style.fontSize,
+                        fontWeight: style.fontWeight,
+                        lineHeight: style.lineHeight,
+                        letterSpacing: style.letterSpacing,
+                        element: el.tagName.toLowerCase()
+                    });
+                }
+            });
+
+            return Object.fromEntries(styles);
+        });
     }
 
     private addToTypographyMap(
-        typographyMap: Map<string, any>,
-        item: any,
+        typographyMap: Map<string, ExtractedTypography>,
+        styles: Record<string, any>,
         category: string,
-        source: string
+        sourceUrl: string
     ): void {
-        const key = this.generateTypographyKey(item, category);
+        for (const [key, styleProps] of Object.entries(styles)) {
+            try {
+                // Convert CSS properties to spec-compliant TypographyValue
+                const specValue = convertCSSPropertiesToTypography(styleProps);
 
-        if (!typographyMap.has(key)) {
-            typographyMap.set(key, {
-                fontFamily: item.fontFamily,
-                fontSize: item.fontSize,
-                fontWeight: item.fontWeight,
-                lineHeight: item.lineHeight,
-                letterSpacing: item.letterSpacing,
-                category,
-                element: item.element,
-                usageCount: item.count || 1,
-                sources: [source]
-            });
-        } else {
-            const existing = typographyMap.get(key);
-            existing.usageCount += item.count || 1;
-            if (!existing.sources.includes(source)) {
-                existing.sources.push(source);
+                // Use the key as the map key for deduplication
+                const mapKey = key;
+
+                if (typographyMap.has(mapKey)) {
+                    const existing = typographyMap.get(mapKey)!;
+                    existing.usageCount += 1;
+                    // Add source URL if not already tracked
+                    if (!existing.sourceUrls.includes(sourceUrl)) {
+                        existing.sourceUrls.push(sourceUrl);
+                        existing.source = `${existing.source}, ${styleProps.element}`;
+                    }
+                } else {
+                    typographyMap.set(mapKey, {
+                        cssProperties: styleProps,
+                        specValue,
+                        source: styleProps.element,
+                        element: styleProps.element,
+                        usageCount: 1,
+                        category,
+                        sourceUrls: [sourceUrl]
+                    });
+                }
+            } catch (error) {
+                // Skip styles that can't be converted
+                logger.warn(`Failed to convert typography style: ${key}`, { error });
             }
         }
     }
 
-    private generateTypographyKey(item: any, category: string): string {
-        return `${category}-${item.fontFamily}-${item.fontSize}-${item.fontWeight}-${item.lineHeight}-${item.letterSpacing}`;
-    }
-
-    private generateTypographyName(info: any): string {
+    private generateTypographyName(info: ExtractedTypography): string {
+        // Generate semantic name based on element and category
         if (info.category === 'heading') {
-            if (info.element === 'h1') return 'heading-1';
-            if (info.element === 'h2') return 'heading-2';
-            if (info.element === 'h3') return 'heading-3';
-            if (info.element === 'h4') return 'heading-4';
-            if (info.element === 'h5') return 'heading-5';
-            if (info.element === 'h6') return 'heading-6';
-            return `heading-${info.fontSize.replace(/[^0-9]/g, '')}`;
+            return `heading-${info.element}`;
         }
 
         if (info.category === 'body') {
             if (info.element === 'p') return 'body-text';
-            if (info.element === 'small') return 'body-small';
-            return `body-${info.fontSize.replace(/[^0-9]/g, '')}`;
+            if (info.element === 'span') return 'body-inline';
+            if (info.element === 'a') return 'body-link';
+            return `body-${info.element}`;
         }
 
         if (info.category === 'special') {
-            if (info.element === 'blockquote') return 'text-quote';
             if (info.element === 'code') return 'text-code';
-            return `text-special-${info.fontSize.replace(/[^0-9]/g, '')}`;
+            if (info.element === 'blockquote') return 'text-quote';
+            if (info.element === 'em') return 'text-emphasis';
+            if (info.element === 'strong') return 'text-strong';
+            return `text-${info.element}`;
         }
 
-        return `typography-${info.category}-${info.fontSize.replace(/[^0-9]/g, '')}`;
-    }
-
-    private generateTypographyValue(info: any): string {
-        return `font-family: ${info.fontFamily}; font-size: ${info.fontSize}; font-weight: ${info.fontWeight}; line-height: ${info.lineHeight}; letter-spacing: ${info.letterSpacing};`;
+        return `typography-${info.category}-${info.element}`.toLowerCase();
     }
 }

@@ -9,6 +9,7 @@
 /* eslint-disable import/no-unresolved */
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { cpus } from 'node:os';
 import { defineConfig } from 'vitest/config';
 import { storybookTest } from '@storybook/addon-vitest/vitest-plugin';
 
@@ -108,7 +109,7 @@ export default defineConfig({
       threads: {
         singleThread: false,
         minThreads: 1,
-        maxThreads: Math.min(4, Math.max(1, Math.floor(require('os').cpus().length / 2))), // Smart CPU usage
+        maxThreads: Math.min(4, Math.max(1, Math.floor(cpus().length / 2))), // Smart CPU usage
         useAtomics: true, // Enable atomic operations for better performance
       },
       // Memory management
@@ -166,9 +167,10 @@ export default defineConfig({
       outputFile: './test-results/benchmark.json',
       reporters: ['default', 'json']
     }
-    },
-    // Storybook test project
-    {
+    }
+  },
+  // Storybook test project
+  {
       plugins: [
         storybookTest({ configDir: path.join(dirname, '.storybook') }),
       ],

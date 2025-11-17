@@ -1,17 +1,16 @@
-import { CrawlConfig, DesignToken } from '../types.js';
+import { CrawlConfig, CrawlResult, DesignToken, AnimationData } from '../types.js';
+import { logger } from '../../utils/logger.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 export class AnimationExtractor {
-    async process(crawlResults: any, config: CrawlConfig): Promise<DesignToken[]> {
-        console.log(`Extracting animations from ${crawlResults.crawledPages?.length || 0} pages`);
+    async process(crawlResults: CrawlResult, config: CrawlConfig): Promise<DesignToken[]> {
+        logger.info('Extracting animations', { pageCount: crawlResults.crawledPages?.length || 0 });
 
         const outputDir = config.outputDir || './results';
         const rawOutputDir = path.join(outputDir, 'raw');
 
-        if (!fs.existsSync(rawOutputDir)) {
-            fs.mkdirSync(rawOutputDir, { recursive: true });
-        }
+        await fs.promises.mkdir(rawOutputDir, { recursive: true });
 
         // Process the animation data from crawl results
         const animationTokens: DesignToken[] = [];
@@ -28,7 +27,7 @@ export class AnimationExtractor {
 
         // If no animations were found, use mock data
         if (animationMap.size === 0) {
-            console.log('No animations found, using mock data');
+            logger.warn('No animations found, using mock data');
             const mockAnimations = [
                 { name: 'fade-in', value: 'opacity 0.3s ease-in', count: 5 },
                 { name: 'slide-up', value: 'transform 0.5s ease-out', count: 3 },
@@ -62,15 +61,15 @@ export class AnimationExtractor {
 
         // Save the results
         const outputFile = path.join(rawOutputDir, 'animation-analysis.json');
-        fs.writeFileSync(outputFile, JSON.stringify(animationTokens, null, 2));
-        console.log(`Animation extraction completed. Found ${animationTokens.length} animations. Results saved to ${outputFile}`);
+        await fs.promises.writeFile(outputFile, JSON.stringify(animationTokens, null, 2));
+        logger.info('Animation extraction completed', { tokensFound: animationTokens.length, outputFile });
 
         return animationTokens;
     }
 
     private addToAnimationMap(
-        animationMap: Map<string, any>,
-        animation: any,
+        animationMap: Map<string, AnimationData>,
+        animation: AnimationData,
         source: string
     ): void {
         const key = animation.name;
@@ -84,9 +83,11 @@ export class AnimationExtractor {
             });
         } else {
             const existing = animationMap.get(key);
-            existing.usageCount += animation.count || 1;
-            if (!existing.sources.includes(source)) {
-                existing.sources.push(source);
+            if (existing) {
+                existing.usageCount = (existing.usageCount || 0) + (animation.count || 1);
+                if (!existing.sources?.includes(source)) {
+                    existing.sources?.push(source);
+                }
             }
         }
     }

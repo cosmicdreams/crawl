@@ -1,7 +1,7 @@
 // src/test-setup.ts
 import { expect, afterEach, vi, beforeAll, afterAll } from 'vitest';
-import { cleanup } from '@testing-library/react';
-import '@testing-library/jest-dom';
+// import { cleanup } from '@testing-library/react';
+// import '@testing-library/jest-dom';
 import { setupPerformanceMonitoring, cleanupTestResources, enforceResourceLimits } from './test-utils/performance-monitor';
 
 // Performance monitoring setup
@@ -174,14 +174,14 @@ export const mockNetworkServices = () => {
 // Clean up after each test and mock DOM APIs only when a browser-like environment is available
 if (typeof window !== 'undefined') {
   afterEach(() => {
-    cleanup();
-    
+    // cleanup(); // Commented out - not needed for backend tests
+
     // Additional performance-focused cleanup
     vi.clearAllMocks();
-    
+
     // Clear any remaining timers
     vi.clearAllTimers();
-    
+
     // Force garbage collection periodically
     if (Math.random() < 0.1 && global.gc) { // 10% chance
       global.gc();

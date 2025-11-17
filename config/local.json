@@ -23,7 +23,7 @@
     ".gz"
   ],
   "screenshots": true,
-  "outputDir": "./results/local-site",
+  "outputDir": "./results",
   "extractors": {
     "colors": {
       "includeTextColors": true,
@@ -53,6 +53,6 @@
   },
   "tokens": {
     "outputFormats": ["css", "json", "figma"],
-    "prefix": "site"
+    "prefix": "dt"
   }
 }

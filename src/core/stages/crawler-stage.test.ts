@@ -20,6 +20,7 @@ vi.mock('playwright', () => {
   const titleSpy = vi.fn();
   const screenshotSpy = vi.fn();
   const evaluateSpy = vi.fn();
+  const routeSpy = vi.fn();
   const newPageSpy = vi.fn();
   const newContextSpy = vi.fn();
   const closeBrowserSpy = vi.fn();
@@ -31,6 +32,7 @@ vi.mock('playwright', () => {
     title: titleSpy,
     screenshot: screenshotSpy,
     evaluate: evaluateSpy,
+    route: routeSpy,
   };
 
   const mockContext = {
@@ -53,6 +55,7 @@ vi.mock('playwright', () => {
       titleSpy,
       screenshotSpy,
       evaluateSpy,
+      routeSpy,
       newPageSpy,
       newContextSpy,
       closeBrowserSpy,
@@ -150,6 +153,18 @@ describe('CrawlerStage', () => {
       }
       return Promise.resolve(Buffer.from('test'));
     });
+    spies.routeSpy.mockImplementation((_pattern: string, callback: (route: any) => void) => {
+      // Immediately invoke the callback with a mock route object
+      const mockRoute = {
+        request: () => ({
+          resourceType: () => 'document'
+        }),
+        abort: () => Promise.resolve(),
+        continue: () => Promise.resolve()
+      };
+      callback(mockRoute);
+      return Promise.resolve();
+    });
     spies.evaluateSpy.mockImplementation(() => {
       let linksToReturn = mockPageEvaluateLinks; // Default
       if (urlToLinksMap[currentEvalUrl]) {
@@ -182,6 +197,7 @@ describe('CrawlerStage', () => {
       title: spies.titleSpy,
       screenshot: spies.screenshotSpy,
       evaluate: spies.evaluateSpy,
+      route: spies.routeSpy,
     };
     const mockContext = {
       newPage: spies.newPageSpy,

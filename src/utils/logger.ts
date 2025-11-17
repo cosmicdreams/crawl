@@ -85,7 +85,12 @@ export class Logger {
                     console.debug(formattedMessage);
                     break;
                 case LogLevel.INFO:
-                    console.info(formattedMessage);
+                    if (levelName === 'SUCCESS') {
+                        // Format success messages to match original CLI style
+                        console.log(formattedMessage);
+                    } else {
+                        console.info(formattedMessage);
+                    }
                     break;
                 case LogLevel.WARN:
                     console.warn(formattedMessage);
@@ -116,6 +121,10 @@ export class Logger {
 
     error(message: string, context?: any): void {
         this.log(LogLevel.ERROR, 'ERROR', message, context);
+    }
+
+    success(message: string, context?: any): void {
+        this.log(LogLevel.INFO, 'SUCCESS', message, context);
     }
 }
 

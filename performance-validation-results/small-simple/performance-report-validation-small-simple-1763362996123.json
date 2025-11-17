@@ -1,0 +1,60 @@
+{
+  "session": {
+    "name": "validation-small-simple",
+    "totalDuration": "60.88",
+    "startTime": "280189285728625",
+    "timestamp": "2025-11-17T07:03:16.113Z"
+  },
+  "performance": {
+    "totalUrls": 0,
+    "totalErrors": 0,
+    "successRate": "N/A%",
+    "averageThroughput": "N/A"
+  },
+  "phases": [
+    {
+      "name": "optimized-validation",
+      "duration": "incomplete",
+      "urls": 0,
+      "successCount": 0,
+      "errorCount": 0,
+      "successRate": "N/A",
+      "throughput": "N/A",
+      "concurrency": "unknown",
+      "browserCount": 1
+    }
+  ],
+  "optimization_metrics": {
+    "concurrency": {},
+    "browserPools": {},
+    "memory": {
+      "heapUsed": {
+        "min": 44,
+        "max": 44,
+        "avg": 44
+      },
+      "rss": {
+        "min": 64,
+        "max": 161,
+        "avg": 129
+      },
+      "snapshots": 3
+    },
+    "errors": []
+  },
+  "assessment": {
+    "targetMet": false,
+    "duration": {
+      "actual": "60.88",
+      "target": "80-90s",
+      "meets": false,
+      "improvement": "47.1%"
+    },
+    "reliability": {
+      "actual": "N/A%",
+      "target": "95%",
+      "meets": false
+    },
+    "overall": "NEEDS_IMPROVEMENT"
+  }
+}

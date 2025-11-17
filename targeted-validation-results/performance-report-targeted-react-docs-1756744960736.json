@@ -1,0 +1,71 @@
+{
+  "session": {
+    "name": "targeted-react-docs",
+    "totalDuration": "80.55",
+    "startTime": "358203861957333",
+    "timestamp": "2025-09-01T16:42:40.736Z"
+  },
+  "performance": {
+    "totalUrls": 2,
+    "totalErrors": 0,
+    "successRate": "100.0%",
+    "averageThroughput": "0.02"
+  },
+  "phases": [
+    {
+      "name": "optimized",
+      "duration": "12.10",
+      "urls": 1,
+      "successCount": 1,
+      "errorCount": 0,
+      "successRate": "100.0",
+      "throughput": "0.08",
+      "concurrency": "unknown",
+      "browserCount": 1
+    },
+    {
+      "name": "sequential",
+      "duration": "68.45",
+      "urls": 1,
+      "successCount": 1,
+      "errorCount": 0,
+      "successRate": "100.0",
+      "throughput": "0.01",
+      "concurrency": "unknown",
+      "browserCount": 1
+    }
+  ],
+  "optimization_metrics": {
+    "concurrency": {},
+    "browserPools": {},
+    "memory": {
+      "heapUsed": {
+        "min": 59,
+        "max": 132,
+        "avg": 90
+      },
+      "rss": {
+        "min": 255,
+        "max": 313,
+        "avg": 289
+      },
+      "snapshots": 6
+    },
+    "errors": []
+  },
+  "assessment": {
+    "targetMet": true,
+    "duration": {
+      "actual": "80.55",
+      "target": "80-90s",
+      "meets": true,
+      "improvement": "30.0%"
+    },
+    "reliability": {
+      "actual": "100.0%",
+      "target": "95%",
+      "meets": true
+    },
+    "overall": "PASS"
+  }
+}

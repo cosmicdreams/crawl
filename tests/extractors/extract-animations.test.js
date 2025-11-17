@@ -1,4 +1,4 @@
-const { extractAnimationsFromCrawledPages, extractAnimationsFromPage, extractAnimations, defaultConfig } = require('../../backup/extract-animations');
+import { extractAnimations } from '../../src/cli/extractors/animations-extractor.js';
 const { chromium } = require('playwright');
 const fs = require('fs');
 const path = require('path');
@@ -17,51 +17,27 @@ describe('extract-animations.js', () => {
     await browser.close();
   });
 
-  test('extractAnimationsFromPage should extract animation styles from a page', async () => {
-    await page.setContent('<div style="animation: fadeIn 2s ease-in-out;"></div>');
-    const result = await extractAnimationsFromPage(page);
+  test('extractAnimations should extract animation styles from a page', async () => {
+    await page.setContent('<button style="animation: fadeIn 2s ease-in-out;">Test</button>');
+    const result = await extractAnimations(page);
 
-    expect(result.success).toBe(true);
-    expect(result.data.elementStyles).toHaveProperty('div');
-    expect(result.data.durations).toContain('2s');
-    expect(result.data.timingFunctions).toContain('ease-in-out');
+    expect(result.keyframes.complete).toContain('2s ease-in-out 0s 1 normal none running fadeIn');
   });
 
-  test('extractAnimations should handle invalid selectors gracefully', async () => {
-    const config = { ...defaultConfig, elements: ['invalid-selector'] };
-    const result = await extractAnimations(page, config);
+  test('extractAnimations should handle pages with no animations gracefully', async () => {
+    await page.setContent('<div>No animations here</div>');
+    const result = await extractAnimations(page);
 
-    expect(result.elementStyles).toEqual({});
-    expect(result.durations).toEqual([]);
-    expect(result.timingFunctions).toEqual([]);
+    expect(result.keyframes.durations).toEqual([]);
+    expect(result.keyframes.timingFunctions).toEqual([]);
+    expect(result.transitions.durations).toEqual([]);
   });
 
-  test('extractAnimationsFromCrawledPages should return error for missing input file', async () => {
-    const config = { ...defaultConfig, inputFile: 'non-existent-file.json' };
-    const result = await extractAnimationsFromCrawledPages(config);
+  test('extractAnimations should handle transitions', async () => {
+    await page.setContent('<button style="transition: all 0.3s ease;">Test</button>');
+    const result = await extractAnimations(page);
 
-    expect(result.success).toBe(false);
-    expect(result.error.type).toBe('FileNotFoundError');
-  });
-
-  test('extractAnimationsFromCrawledPages should analyze multiple pages', async () => {
-    const mockCrawlResults = {
-      crawledPages: [
-        { url: 'https://example.com', status: 200 },
-        { url: 'https://example.org', status: 200 }
-      ]
-    };
-
-    const config = { ...defaultConfig, maxPages: 2 };
-    jest.spyOn(fs, 'readFileSync').mockReturnValue(JSON.stringify(mockCrawlResults));
-    jest.spyOn(fs, 'writeFileSync').mockImplementation(() => {});
-
-    const result = await extractAnimationsFromCrawledPages(config);
-
-    expect(result.success).toBe(true);
-    expect(result.data.pagesAnalyzed.length).toBe(2);
-
-    fs.readFileSync.mockRestore();
-    fs.writeFileSync.mockRestore();
+    expect(result.transitions.durations).toContain('0.3s');
+    expect(result.transitions.properties).toContain('all');
   });
 });

@@ -1,6 +1,6 @@
 # Site Crawler
 
-A sophisticated web crawling and design token extraction tool that systematically analyzes websites to extract design patterns, CSS tokens, and metadata.
+A sophisticated web crawling and design token extraction tool that systematically analyzes websites to extract design patterns and generate **Design Tokens Specification 2025.10** compliant output.
 
 ## 🚀 Quick Start
 
@@ -9,8 +9,8 @@ A sophisticated web crawling and design token extraction tool that systematicall
 pnpm install
 
 # Configure your target site
-cp config/config.json.example config/config.json
-# Edit config.json with your target URL
+cp config/local.json.example config/local.json
+# Edit config/local.json with your target URL
 
 # Run complete analysis
 pnpm run all
@@ -18,48 +18,66 @@ pnpm run all
 
 ## ✨ Features
 
-### Core Crawling
+### Core Crawling (CLI)
 - **Multi-phase Crawling**: Prevents timeouts with systematic depth progression
-- **URL Discovery**: Intelligent link extraction and validation  
+- **URL Discovery**: Intelligent link extraction and validation
 - **Metadata Collection**: Page templates, structure analysis, and classification
 - **Error Recovery**: Robust retry mechanisms and graceful failure handling
 
-### Design Token Extraction
-- **Color Analysis**: Comprehensive color palette extraction and naming
-- **Typography Tokens**: Font systems, scales, and hierarchy detection
+### Design Token Extraction (TypeScript Core)
+- **Spec-Compliant Output**: Generates Design Tokens Specification 2025.10 `.tokens.json` files
+- **Color Analysis**: Comprehensive color palette extraction with hex values and usage tracking
+- **Typography Tokens**: Font systems, scales, and hierarchy detection with font families
 - **Spacing Patterns**: Layout tokens and grid system identification
 - **Border & Animation**: Visual effects and motion pattern analysis
 
+### Generators (✅ Phases 1-3 Complete - 125/125 tests passing)
+- **SpecGenerator**: Core `.tokens.json` generation (Design Tokens Spec 2025.10)
+- **StyleguideGenerator**: Interactive HTML/CSS/JS styleguide with live preview
+- **DocumentationGenerator**: Comprehensive markdown → HTML documentation
+
 ### Modern Architecture
-- **Dual Implementation**: TypeScript pipeline + proven JavaScript phases
-- **Real-time UI**: React components with Storybook development
-- **WebSocket API**: Live progress updates and result streaming
-- **Comprehensive Testing**: Unit, integration, E2E, and visual regression tests
+- **CLI Primary Interface**: JavaScript CLI (`src/cli/`) for crawling workflow
+- **TypeScript Core**: Token extraction pipeline (`src/core/`) with spec-compliant generators
+- **Comprehensive Testing**: Unit, integration, E2E tests with Vitest and Playwright
 
 ## 🏗️ Architecture
 
 ### Project Structure
 ```
-├── src/                    # Modern TypeScript architecture  
-│   ├── core/              # Extraction pipeline
-│   ├── ui/                # React UI components
-│   └── api/               # WebSocket server
-├── phases/                # Legacy JavaScript crawling
-├── utils/                 # Shared utilities
-├── tests/                 # Comprehensive test suite
-└── ClaudeDocs/           # Complete documentation
+├── src/
+│   ├── cli/               # JavaScript CLI implementation (primary interface)
+│   │   ├── index.js       # CLI entry point with Commander.js
+│   │   └── phases/        # Crawling phases (initial, deepen, metadata, extract)
+│   ├── core/              # TypeScript extraction pipeline
+│   │   ├── stages/        # Extractor stages (color, typography, spacing, etc.)
+│   │   ├── tokens/        # Design Tokens Spec 2025.10 implementation
+│   │   └── generators/    # SpecGenerator, StyleguideGenerator, DocumentationGenerator
+│   └── utils/             # Shared utilities
+├── tests/                 # Comprehensive test suite (Vitest + Playwright)
+│   ├── unit/              # Unit tests for extractors and generators
+│   ├── integration/       # Cross-component integration tests
+│   └── console/           # CLI workflow tests
+└── config/                # Configuration files
+    └── local.json         # Site-specific settings
 ```
 
 ### Data Flow
 ```
-URL Input → Initial Crawl → Deep Crawl → Metadata → Extraction → Design Tokens
-     ↓           ↓            ↓           ↓            ↓            ↓
-  config.json  paths.json   paths.json  metadata.json  extract/   tokens/
+CLI Workflow:
+URL Input → Initial Crawl → Deep Crawl → Metadata → Token Extraction
+     ↓           ↓             ↓            ↓              ↓
+config.json  paths.json    paths.json  metadata.json  raw/*.json
+
+Generator Pipeline:
+Raw Tokens → SpecGenerator → StyleguideGenerator → DocumentationGenerator
+     ↓              ↓                  ↓                      ↓
+raw/*.json    .tokens.json      styleguide.html       docs/index.html
 ```
 
 ## ⚙️ Configuration
 
-Before running the crawler, configure your target site in `config/config.json`:
+Configure your target site in `config/local.json`:
 
 ```json5
 {
@@ -68,7 +86,7 @@ Before running the crawler, configure your target site in `config/config.json`:
   "crawl_settings": {
     "max_depth": 3,           // Maximum crawl depth
     "batch_size": 20,         // Pages per batch
-    "max_retries": 2,         // Failed request retries  
+    "max_retries": 2,         // Failed request retries
     "timeout": 45000,         // Page load timeout (ms)
     "ignore_patterns": [      // URL patterns to skip
       "*.pdf", "/admin/*", "/api/*"
@@ -79,7 +97,8 @@ Before running the crawler, configure your target site in `config/config.json`:
     "extract_typography": true,
     "extract_spacing": true,
     "extract_borders": true,
-    "extract_animations": true
+    "extract_animations": true,
+    "minimumOccurrences": 2   // Minimum times a token must appear to be included
   }
 }
 ```
@@ -119,35 +138,6 @@ node index.js all \
   --timeout 30000
 ```
 
-## 🎨 UI Development
-
-### Storybook Development
-```bash
-# Start interactive component development
-pnpm run storybook
-
-# Run Storybook tests
-pnpm run test:storybook
-```
-
-### Real-time Integration
-```javascript
-// WebSocket connection for live updates
-const ws = new WebSocket('ws://localhost:3001');
-
-ws.onmessage = (event) => {
-  const { event: eventType, data } = JSON.parse(event.data);
-  
-  switch (eventType) {
-    case 'progress-update':
-      updateProgress(data.progress);
-      break;
-    case 'extraction-complete':
-      displayResults(data.results);
-      break;
-  }
-};
-```
 
 ## 🧪 Testing
 
@@ -178,28 +168,45 @@ pnpm run build             # Build verification
 ## 📊 Output
 
 ### Generated Files
-- **`output/paths.json`**: Discovered URLs and crawl metadata
-- **`output/metadata.json`**: Page structure and template analysis
-- **`output/extract/`**: Design token JSON files
-  - `colors.json` - Color palette and usage patterns
-  - `typography.json` - Font systems and type scales  
-  - `spacing.json` - Layout and spacing tokens
-  - `borders.json` - Border styles and visual patterns
-  - `animations.json` - Motion and transition effects
 
-### Example Output
+#### Crawl Phase Outputs
+- **`results/paths.json`**: Discovered URLs and crawl metadata
+- **`results/metadata.json`**: Page structure and template analysis
+- **`results/raw/`**: Raw extracted design tokens
+  - `color-analysis.json` - Color palette with hex values and usage
+  - `typography-analysis.json` - Font systems and type scales
+  - `spacing-analysis.json` - Layout and spacing patterns
+  - `border-analysis.json` - Border styles
+  - `animation-analysis.json` - Motion and transition effects
+
+#### Generator Outputs (Design Tokens Spec 2025.10)
+- **`results/.tokens.json`**: Spec-compliant design tokens file
+- **`results/styleguide.html`**: Interactive styleguide with live preview
+- **`results/docs/`**: Comprehensive documentation site
+  - `index.html` - Documentation homepage
+  - `tokens/` - Individual token documentation pages
+
+### Example Token Output (.tokens.json)
 ```json
 {
-  "primary_palette": {
-    "brand_blue": {
-      "hex": "#3B82F6",
-      "usage_count": 45,
-      "contexts": ["buttons", "links", "headers"]
+  "colors": {
+    "primary": {
+      "blue": {
+        "$type": "color",
+        "$value": "#3B82F6",
+        "$description": "Primary brand color used in buttons and links",
+        "usageCount": 45
+      }
     }
   },
-  "color_statistics": {
-    "unique_colors": 34,
-    "most_used_color": "#3B82F6"
+  "typography": {
+    "fontFamilies": {
+      "sans": {
+        "$type": "fontFamily",
+        "$value": ["Inter", "system-ui", "sans-serif"],
+        "usageCount": 127
+      }
+    }
   }
 }
 ```
@@ -260,34 +267,35 @@ DEBUG=crawler:* node index.js all --url https://example.com
 DEBUG=crawler:extraction node index.js extract
 ```
 
-## 📚 Documentation
+## 📚 Project Status
 
-### Complete Documentation Available
-- **[API Documentation](ClaudeDocs/API_DOCUMENTATION.md)**: WebSocket API and CLI reference
-- **[Developer Guide](ClaudeDocs/DEVELOPER_GUIDE.md)**: Development workflows and patterns
-- **[Component Reference](ClaudeDocs/COMPONENT_REFERENCE.md)**: Detailed component documentation
+### Completed Phases
+- ✅ **Phase 1**: Core Infrastructure (Design Token extraction pipeline)
+- ✅ **Phase 2**: Styleguide Generator (Interactive HTML/CSS/JS styleguide)
+- ✅ **Phase 3**: Documentation Generator (Markdown → HTML documentation site)
+- **125/125 tests passing** for Phases 1-3
+
+### In Progress
+- **Phase 4**: Pipeline Integration (CLI → TypeScript stages migration)
+- **Phase 5**: Testing & Quality (Integration and E2E test fixes)
+
+### Roadmap
+See [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) for detailed phase breakdown and technical specifications.
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Install dependencies: `pnpm install`  
+2. Install dependencies: `pnpm install`
 3. Create feature branch: `git checkout -b feature/amazing-feature`
 4. Make changes with tests: `pnpm test`
 5. Submit pull request
 
 ### Development Standards
-- TypeScript strict mode enabled
+- TypeScript strict mode for core modules
 - ESLint + Prettier code formatting
 - Comprehensive test coverage required
-- Documentation updates for new features
+- CLI-first development approach
 
 ## 📄 License
 
 This project is licensed under the ISC License.
-
-## 🆘 Support
-
-- **Documentation**: Check `ClaudeDocs/` directory for comprehensive guides
-- **UI Components**: Interactive examples at `pnpm run storybook`  
-- **Issues**: Report bugs via GitHub Issues
-- **Discussions**: Ask questions in GitHub Discussions

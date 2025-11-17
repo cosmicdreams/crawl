@@ -1,0 +1,60 @@
+{
+  "session": {
+    "name": "Small Site-sequential",
+    "totalDuration": "2.07",
+    "startTime": "356697573861250",
+    "timestamp": "2025-09-01T16:16:15.972Z"
+  },
+  "performance": {
+    "totalUrls": 1,
+    "totalErrors": 0,
+    "successRate": "100.0%",
+    "averageThroughput": "0.48"
+  },
+  "phases": [
+    {
+      "name": "total_pipeline",
+      "duration": "2.07",
+      "urls": 1,
+      "successCount": 1,
+      "errorCount": 0,
+      "successRate": "100.0",
+      "throughput": "0.48",
+      "concurrency": "sequential",
+      "browserCount": 1
+    }
+  ],
+  "optimization_metrics": {
+    "concurrency": {},
+    "browserPools": {},
+    "memory": {
+      "heapUsed": {
+        "min": 38,
+        "max": 61,
+        "avg": 50
+      },
+      "rss": {
+        "min": 155,
+        "max": 168,
+        "avg": 162
+      },
+      "snapshots": 4
+    },
+    "errors": []
+  },
+  "assessment": {
+    "targetMet": false,
+    "duration": {
+      "actual": "2.07",
+      "target": "80-90s",
+      "meets": false,
+      "improvement": "98.2%"
+    },
+    "reliability": {
+      "actual": "100.0%",
+      "target": "95%",
+      "meets": true
+    },
+    "overall": "NEEDS_IMPROVEMENT"
+  }
+}

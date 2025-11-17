@@ -1,0 +1,71 @@
+{
+  "session": {
+    "name": "targeted-tailwind-docs",
+    "totalDuration": "92.67",
+    "startTime": "358284412823875",
+    "timestamp": "2025-09-01T16:44:13.410Z"
+  },
+  "performance": {
+    "totalUrls": 2,
+    "totalErrors": 0,
+    "successRate": "100.0%",
+    "averageThroughput": "0.02"
+  },
+  "phases": [
+    {
+      "name": "optimized",
+      "duration": "10.52",
+      "urls": 1,
+      "successCount": 1,
+      "errorCount": 0,
+      "successRate": "100.0",
+      "throughput": "0.10",
+      "concurrency": "unknown",
+      "browserCount": 1
+    },
+    {
+      "name": "sequential",
+      "duration": "82.16",
+      "urls": 1,
+      "successCount": 1,
+      "errorCount": 0,
+      "successRate": "100.0",
+      "throughput": "0.01",
+      "concurrency": "unknown",
+      "browserCount": 1
+    }
+  ],
+  "optimization_metrics": {
+    "concurrency": {},
+    "browserPools": {},
+    "memory": {
+      "heapUsed": {
+        "min": 59,
+        "max": 88,
+        "avg": 71
+      },
+      "rss": {
+        "min": 248,
+        "max": 342,
+        "avg": 282
+      },
+      "snapshots": 6
+    },
+    "errors": []
+  },
+  "assessment": {
+    "targetMet": false,
+    "duration": {
+      "actual": "92.67",
+      "target": "80-90s",
+      "meets": false,
+      "improvement": "19.5%"
+    },
+    "reliability": {
+      "actual": "100.0%",
+      "target": "95%",
+      "meets": true
+    },
+    "overall": "NEEDS_IMPROVEMENT"
+  }
+}

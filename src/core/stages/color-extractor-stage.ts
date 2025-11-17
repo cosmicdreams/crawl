@@ -1,10 +1,14 @@
 // src/core/stages/color-extractor-stage.ts
 // Using ESM syntax
 import { PipelineStage } from '../pipeline.js';
-import { CrawlResult, DesignToken } from '../types.js';
+import { CrawlResult } from '../types.js';
+import { logger } from '../../utils/logger.js';
 import { Browser, chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import { convertCSSColorToSpec } from '../tokens/converters/color-converter.js';
+import { ColorValue } from '../tokens/types/primitives.js';
+import { ExtractedTokenData } from '../tokens/generators/spec-generator.js';
 
 interface ColorExtractorOptions {
     includeTextColors: boolean;
@@ -15,7 +19,7 @@ interface ColorExtractorOptions {
 }
 
 interface ColorExtractionResult {
-    tokens: DesignToken[];
+    tokens: ExtractedTokenData[];
     stats: {
         totalColors: number;
         uniqueColors: number;
@@ -26,12 +30,14 @@ interface ColorExtractionResult {
 }
 
 interface ExtractedColor {
-    value: string;
+    cssValue: string;          // Original CSS color string
+    specValue: ColorValue;     // Spec-compliant ColorValue object
     source: string;
     element: string;
     usageCount: number;
     category?: string;
     name?: string;
+    sourceUrls: string[];
 }
 
 export class ColorExtractorStage implements PipelineStage<CrawlResult, ColorExtractionResult> {
@@ -46,7 +52,7 @@ export class ColorExtractorStage implements PipelineStage<CrawlResult, ColorExtr
     }) {}
 
     async process(input: CrawlResult): Promise<ColorExtractionResult> {
-        console.log(`Extracting colors from ${input.crawledPages?.length || 0} pages`);
+        logger.info('Extracting colors', { pageCount: input.crawledPages?.length || 0 });
 
         const outputDir = this.options.outputDir || './results';
         const rawOutputDir = path.join(outputDir, 'raw');
@@ -94,22 +100,23 @@ export class ColorExtractorStage implements PipelineStage<CrawlResult, ColorExtr
             await browser.close();
         }
 
-        // Convert the color map to design tokens
-        const colorTokens: DesignToken[] = [];
+        // Convert the color map to spec-compliant design tokens
+        const colorTokens: ExtractedTokenData[] = [];
 
-        for (const [colorValue, colorInfo] of colorMap.entries()) {
+        for (const [colorKey, colorInfo] of colorMap.entries()) {
             if (colorInfo.usageCount >= this.options.minimumOccurrences) {
                 // Generate a name for the color if not already set
-                const name = colorInfo.name || this.generateColorName(colorValue, colorInfo.category || 'unknown');
+                const name = colorInfo.name || this.generateColorName(colorInfo.specValue.hex || colorKey, colorInfo.category || 'unknown');
 
                 colorTokens.push({
-                    name,
-                    value: colorValue,
                     type: 'color',
+                    name,
+                    value: colorInfo.specValue,  // Spec-compliant ColorValue object
                     category: colorInfo.category,
-                    description: `Extracted from ${colorInfo.source}`,
+                    description: `${colorInfo.category || 'Color'} extracted from ${colorInfo.sourceUrls.length} page(s)`,
                     usageCount: colorInfo.usageCount,
-                    source: colorInfo.source
+                    source: colorInfo.source,
+                    sourceUrls: colorInfo.sourceUrls
                 });
             }
         }
@@ -188,91 +195,47 @@ export class ColorExtractorStage implements PipelineStage<CrawlResult, ColorExtr
         });
     }
 
-    private addToColorMap(colorMap: Map<string, ExtractedColor>, colors: Record<string, string>, category: string, source: string): void {
-        for (const [colorValue, element] of Object.entries(colors)) {
-            // Normalize color to hex if possible
-            const normalizedColor = this.normalizeColor(colorValue);
+    private addToColorMap(colorMap: Map<string, ExtractedColor>, colors: Record<string, string>, category: string, sourceUrl: string): void {
+        for (const [cssColor, element] of Object.entries(colors)) {
+            try {
+                // Convert CSS color to spec-compliant ColorValue
+                const specValue = convertCSSColorToSpec(cssColor);
 
-            if (normalizedColor) {
-                if (colorMap.has(normalizedColor)) {
-                    const existing = colorMap.get(normalizedColor)!;
+                // Use hex as the map key for deduplication
+                const mapKey = specValue.hex || cssColor;
+
+                if (colorMap.has(mapKey)) {
+                    const existing = colorMap.get(mapKey)!;
                     existing.usageCount += 1;
-                    // Keep track of different sources
-                    if (!existing.source.includes(source)) {
-                        existing.source = `${existing.source}, ${source}`;
+                    // Add source URL if not already tracked
+                    if (!existing.sourceUrls.includes(sourceUrl)) {
+                        existing.sourceUrls.push(sourceUrl);
+                        existing.source = `${existing.source}, ${element}`;
                     }
                 } else {
-                    colorMap.set(normalizedColor, {
-                        value: normalizedColor,
-                        source,
+                    colorMap.set(mapKey, {
+                        cssValue: cssColor,
+                        specValue,
+                        source: element,
                         element,
                         usageCount: 1,
-                        category
+                        category,
+                        sourceUrls: [sourceUrl]
                     });
                 }
+            } catch (error) {
+                // Skip colors that can't be converted (e.g., invalid CSS)
+                logger.warn(`Failed to convert color: ${cssColor}`, { error });
             }
         }
     }
 
-    private normalizeColor(color: string): string | null {
-        // Handle hex colors
-        if (color.startsWith('#')) {
-            return color.toLowerCase();
-        }
+    // Removed normalizeColor() - now using convertCSSColorToSpec() from converters
 
-        // Handle rgb/rgba colors
-        const rgbMatch = color.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
-        if (rgbMatch) {
-            const r = parseInt(rgbMatch[1], 10);
-            const g = parseInt(rgbMatch[2], 10);
-            const b = parseInt(rgbMatch[3], 10);
-            const a = rgbMatch[4] ? parseFloat(rgbMatch[4]) : 1;
-
-            // If fully transparent, ignore
-            if (a === 0) return null;
-
-            // Convert to hex
-            if (a === 1) {
-                const rHex = r.toString(16).padStart(2, '0');
-                const gHex = g.toString(16).padStart(2, '0');
-                const bHex = b.toString(16).padStart(2, '0');
-                return `#${rHex}${gHex}${bHex}`;
-            }
-
-            // Keep rgba for semi-transparent colors
-            return color;
-        }
-
-        // Handle named colors (would need a color name to hex mapping)
-        // For simplicity, we'll just return the original color
-        return color;
-    }
-
-    private generateColorName(colorValue: string, category: string): string {
-        // For hex colors, generate a simple name based on the hex value
-        if (colorValue.startsWith('#')) {
-            const shortHex = colorValue.length > 4 ? colorValue.substring(1, 7) : colorValue.substring(1);
-            return `${category}-${shortHex}`;
-        }
-
-        // For rgb colors, extract the values
-        const rgbMatch = colorValue.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
-        if (rgbMatch) {
-            const r = parseInt(rgbMatch[1], 10);
-            const g = parseInt(rgbMatch[2], 10);
-            const b = parseInt(rgbMatch[3], 10);
-            const a = rgbMatch[4] ? parseFloat(rgbMatch[4]) : 1;
-
-            // Create a name based on RGB values
-            if (a < 1) {
-                return `${category}-rgb-${r}-${g}-${b}-${Math.round(a * 100)}`;
-            }
-
-            return `${category}-rgb-${r}-${g}-${b}`;
-        }
-
-        // Fallback: use the color value as part of the name
-        const safeValue = colorValue.replace(/[^a-zA-Z0-9]/g, '-');
-        return `${category}-color-${safeValue}`;
+    private generateColorName(hexValue: string, category: string): string {
+        // Generate semantic name from hex value
+        // Remove # and use as identifier
+        const cleanHex = hexValue.replace('#', '');
+        return `${category}-${cleanHex}`.toLowerCase();
     }
 }

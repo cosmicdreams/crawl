@@ -3,12 +3,14 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # Build output
 dist/
 build/
 .next/
 out/
+storybook-static/
 
 # Environment variables
 .env
@@ -23,12 +25,16 @@ out/
 .tmp/
 *.tsbuildinfo
 .eslintcache
+.turbo/
+.nuxt/
+.vite-cache/
 
 # Coverage and test reports
 coverage/
 test-results/
 playwright-report/
 .nyc_output/
+vitest-report/
 
 # IDE and editor files
 .idea/
@@ -36,6 +42,10 @@ playwright-report/
 *.swp
 *.swo
 *~
+.fleet/
+.nova/
+.claude/
+.cursor/
 
 # OS generated files
 .DS_Store
@@ -45,23 +55,65 @@ playwright-report/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
-# Application specific
+# Application specific - crawler outputs
 output/
 results/
-backup/
 screenshots/
 logs/
 *.log
+
+# Local development and testing
+backup/
+archive/
+ClaudeDocs/
+create-test-plan-prompt.js
+test-logger.*
 
 # Configuration files with sensitive data
 config/*.json
 !config/default.json
 !config/example.json
+local.json
+*.local.json
+
+# Package managers
+.pnpm-store/
+.yarn/
+.npm/
+
+# Runtime and debug files
+*.pid
+*.seed
+*.log.*
+debug/
+.debug/
+
+# Temporary test files
+temp-*
+test-output/
+mock-data/
+*.tmp.js
+*.tmp.ts
 
 # Storybook
-storybook-static/
 *storybook.log
 
 # Vitest
 vitest.config.js.timestamp-*
+.vitest/
+
+# TypeScript
+*.d.ts.map
+
+# Local server files
+.serve/
+
+# Drupal module development (if applicable)
+modules/custom/*/vendor/
+modules/custom/*/node_modules/
+
+# Performance test results
+perf-results/
+benchmark-results/

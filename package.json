@@ -42,6 +42,7 @@
     "@types/uuid": "^10.0.0",
     "chalk": "^5.6.0",
     "commander": "^14.0.0",
+    "inquirer": "^12.9.4",
     "jsdom": "^26.1.0",
     "ora": "^8.2.0",
     "reactflow": "^11.11.4",

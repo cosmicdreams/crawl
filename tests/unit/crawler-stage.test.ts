@@ -1,13 +1,46 @@
 // tests/unit/crawler-stage.test.ts
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { CrawlConfig } from '../../src/core/types.js';
-import * as fs from 'node:fs';
-import { chromium } from 'playwright';
+
+// Create mocks in hoisted scope
+const { fsMock, pathMock, playwrightMock } = vi.hoisted(() => {
+  // Create the actual mock objects
+  const fs = {
+    promises: {
+      mkdir: vi.fn().mockResolvedValue(undefined),
+      writeFile: vi.fn().mockResolvedValue(undefined)
+    },
+    existsSync: vi.fn().mockReturnValue(true),
+    mkdirSync: vi.fn(),
+    writeFileSync: vi.fn()
+  };
+
+  const path = {
+    join: vi.fn((...args) => args.join('/')),
+    dirname: vi.fn(path => path.split('/').slice(0, -1).join('/')),
+    relative: vi.fn((from, to) => to.replace(from, '').replace(/^\//, ''))
+  };
+
+  // Return mocks with both default and named exports
+  return {
+    fsMock: { default: fs, ...fs },
+    pathMock: { default: path, ...path },
+    playwrightMock: {
+      chromium: {
+        launch: vi.fn()
+      }
+    }
+  };
+});
 
 // Mock modules first
-vi.mock('playwright');
-vi.mock('node:fs');
-vi.mock('node:path');
+vi.mock('node:fs', () => fsMock);
+vi.mock('node:path', () => pathMock);
+vi.mock('playwright', () => playwrightMock);
+
+// Import mocked modules
+import fs from 'node:fs';
+import { chromium } from 'playwright';
 
 // Import after mocking
 const { CrawlerStage } = await import('../../src/core/stages/crawler-stage.js');
@@ -35,32 +68,31 @@ describe('CrawlerStage', () => {
   });
 
   it('should create output directories when they do not exist', async () => {
-    const mockExistsSync = vi.mocked(fs.existsSync);
-    const mockMkdirSync = vi.mocked(fs.mkdirSync);
-    
-    // Setup mocks
-    mockExistsSync.mockReturnValue(false);
-    
+    const mockMkdir = vi.mocked(fs.promises.mkdir);
+
+    // The implementation uses fs.promises.mkdir, not mkdirSync
     const mockPage = {
       setDefaultTimeout: vi.fn(),
       goto: vi.fn().mockResolvedValue({}),
       title: vi.fn().mockResolvedValue('Test Page'),
       screenshot: vi.fn().mockResolvedValue(Buffer.from('test')),
-      evaluate: vi.fn().mockResolvedValue([])
+      evaluate: vi.fn().mockResolvedValue([]),
+      route: vi.fn().mockResolvedValue(undefined)
     };
-    
+
     const mockBrowser = {
       newContext: vi.fn().mockResolvedValue({
         newPage: vi.fn().mockResolvedValue(mockPage)
       }),
       close: vi.fn()
     };
-    
+
     vi.mocked(chromium.launch).mockResolvedValue(mockBrowser as any);
-    
+
     const result = await crawlerStage.process(mockConfig);
-    
-    expect(mockMkdirSync).toHaveBeenCalledWith('./test-results', { recursive: true });
+
+    // Verify fs.promises.mkdir was called for output directory
+    expect(mockMkdir).toHaveBeenCalledWith('./test-results', { recursive: true });
     expect(result).toBeDefined();
   });
 
@@ -72,7 +104,8 @@ describe('CrawlerStage', () => {
       goto: vi.fn().mockResolvedValue({}),
       title: vi.fn().mockResolvedValue('Test Page'),
       screenshot: vi.fn().mockResolvedValue(Buffer.from('test')),
-      evaluate: vi.fn().mockResolvedValue([])
+      evaluate: vi.fn().mockResolvedValue([]),
+      route: vi.fn().mockResolvedValue(undefined)
     };
     
     const mockBrowser = {
@@ -110,7 +143,8 @@ describe('CrawlerStage', () => {
       evaluate: vi.fn().mockResolvedValue([
         'https://example.com/page1',
         'https://example.com/page2'
-      ])
+      ]),
+      route: vi.fn().mockResolvedValue(undefined)
     };
     
     const mockBrowser = {
@@ -135,7 +169,8 @@ describe('CrawlerStage', () => {
       goto: vi.fn().mockResolvedValue({}),
       title: vi.fn().mockResolvedValue('Test Page'),
       screenshot: vi.fn().mockResolvedValue(Buffer.from('test')),
-      evaluate: vi.fn().mockResolvedValue([])
+      evaluate: vi.fn().mockResolvedValue([]),
+      route: vi.fn().mockResolvedValue(undefined)
     };
     
     const mockBrowser = {
@@ -160,7 +195,8 @@ describe('CrawlerStage', () => {
       goto: vi.fn().mockRejectedValue(new Error('Navigation failed')),
       title: vi.fn(),
       screenshot: vi.fn(),
-      evaluate: vi.fn()
+      evaluate: vi.fn(),
+      route: vi.fn().mockResolvedValue(undefined)
     };
     
     const mockBrowser = {

@@ -1,21 +1,25 @@
 // src/core/stages/spacing-extractor-stage.ts
 // Using ESM syntax
 import { PipelineStage } from '../pipeline.js';
-import { CrawlResult, DesignToken } from '../types.js';
+import { CrawlResult } from '../types.js';
+import { logger } from '../../utils/logger.js';
 import { Browser, chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import { convertCSSSizeToDimension } from '../tokens/converters/value-converters.js';
+import { DimensionValue } from '../tokens/types/primitives.js';
+import { ExtractedTokenData } from '../tokens/generators/spec-generator.js';
 
 interface SpacingExtractorOptions {
     includeMargins: boolean;
     includePadding: boolean;
     includeGap: boolean;
+    minimumOccurrences: number;
     outputDir?: string;
-    minOccurrences?: number;
 }
 
 interface SpacingExtractionResult {
-    tokens: DesignToken[];
+    tokens: ExtractedTokenData[];
     stats: {
         totalSpacings: number;
         uniqueSpacings: number;
@@ -26,13 +30,14 @@ interface SpacingExtractionResult {
 }
 
 interface ExtractedSpacing {
-    value: string;
+    cssValue: string;              // Original CSS spacing value
+    specValue: DimensionValue;     // Spec-compliant DimensionValue object
     property: string;
     element: string;
     usageCount: number;
     category?: string;
-    source?: string;
     name?: string;
+    sourceUrls: string[];
 }
 
 export class SpacingExtractorStage implements PipelineStage<CrawlResult, SpacingExtractionResult> {
@@ -42,12 +47,12 @@ export class SpacingExtractorStage implements PipelineStage<CrawlResult, Spacing
         includeMargins: true,
         includePadding: true,
         includeGap: true,
-        outputDir: './results',
-        minOccurrences: 2
+        minimumOccurrences: 2,
+        outputDir: './results'
     }) {}
 
     async process(input: CrawlResult): Promise<SpacingExtractionResult> {
-        console.log(`Extracting spacing from ${input.crawledPages?.length || 0} pages`);
+        logger.info('Extracting spacing', { pageCount: input.crawledPages?.length || 0 });
 
         const outputDir = this.options.outputDir || './results';
         const rawOutputDir = path.join(outputDir, 'raw');
@@ -95,146 +100,23 @@ export class SpacingExtractorStage implements PipelineStage<CrawlResult, Spacing
             await browser.close();
         }
 
-        // If no spacing was found, use mock data for now
-        if (spacingMap.size === 0) {
-            console.log('No spacing found, using mock data');
-            const mockSpacing = [
-                {
-                    name: 'spacing-0',
-                    value: '0',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 120
-                },
-                {
-                    name: 'spacing-1',
-                    value: '0.25rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 85
-                },
-                {
-                    name: 'spacing-2',
-                    value: '0.5rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 156
-                },
-                {
-                    name: 'spacing-3',
-                    value: '0.75rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 92
-                },
-                {
-                    name: 'spacing-4',
-                    value: '1rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 210
-                },
-                {
-                    name: 'spacing-5',
-                    value: '1.25rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 78
-                },
-                {
-                    name: 'spacing-6',
-                    value: '1.5rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 64
-                },
-                {
-                    name: 'spacing-8',
-                    value: '2rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 42
-                },
-                {
-                    name: 'spacing-10',
-                    value: '2.5rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 28
-                },
-                {
-                    name: 'spacing-12',
-                    value: '3rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 15
-                },
-                {
-                    name: 'spacing-16',
-                    value: '4rem',
-                    type: 'spacing',
-                    category: 'base',
-                    usageCount: 8
-                },
-                {
-                    name: 'margin-auto',
-                    value: 'auto',
-                    type: 'spacing',
-                    category: 'margin',
-                    usageCount: 45
-                },
-                {
-                    name: 'gap-sm',
-                    value: '0.5rem',
-                    type: 'spacing',
-                    category: 'gap',
-                    usageCount: 32
-                },
-                {
-                    name: 'gap-md',
-                    value: '1rem',
-                    type: 'spacing',
-                    category: 'gap',
-                    usageCount: 28
-                },
-                {
-                    name: 'gap-lg',
-                    value: '2rem',
-                    type: 'spacing',
-                    category: 'gap',
-                    usageCount: 18
-                },
-            ] as DesignToken[];
+        // Convert the spacing map to spec-compliant design tokens
+        const spacingTokens: ExtractedTokenData[] = [];
 
-            // Add mock data to the map
-            for (const token of mockSpacing) {
-                spacingMap.set(token.value, {
-                    value: token.value,
-                    property: token.category === 'margin' ? 'margin' :
-                              token.category === 'padding' ? 'padding' : 'gap',
-                    element: 'div',
-                    usageCount: token.usageCount || 0,
-                    category: token.category,
-                    name: token.name
-                });
-            }
-        }
-
-        // Convert the spacing map to design tokens
-        const spacingTokens: DesignToken[] = [];
-
-        for (const [spacingValue, spacingInfo] of spacingMap.entries()) {
-            if (spacingInfo.usageCount >= (this.options.minOccurrences || 2)) {
+        for (const [key, spacingInfo] of spacingMap.entries()) {
+            if (spacingInfo.usageCount >= this.options.minimumOccurrences) {
                 // Generate a name for the spacing if not already set
                 const name = spacingInfo.name || this.generateSpacingName(spacingInfo);
 
                 spacingTokens.push({
+                    type: 'dimension',  // Per Design Tokens Specification 2025.10, spacing uses dimension type
                     name,
-                    value: spacingValue,
-                    type: 'spacing',
+                    value: spacingInfo.specValue,  // Spec-compliant DimensionValue object
                     category: spacingInfo.category,
-                    description: `Extracted from ${spacingInfo.property} property`,
-                    usageCount: spacingInfo.usageCount
+                    description: `${spacingInfo.category || 'Spacing'} extracted from ${spacingInfo.sourceUrls.length} page(s)`,
+                    usageCount: spacingInfo.usageCount,
+                    source: spacingInfo.property,
+                    sourceUrls: spacingInfo.sourceUrls
                 });
             }
         }
@@ -259,7 +141,7 @@ export class SpacingExtractorStage implements PipelineStage<CrawlResult, Spacing
         };
     }
 
-    private async extractMarginValues(page: any): Promise<Record<string, ExtractedSpacing>> {
+    private async extractMarginValues(page: any): Promise<Record<string, any>> {
         return await page.evaluate(() => {
             const spacings = new Map<string, any>();
             const elements = document.querySelectorAll('*');
@@ -270,7 +152,7 @@ export class SpacingExtractorStage implements PipelineStage<CrawlResult, Spacing
                 // Extract margin values
                 ['margin', 'marginTop', 'marginRight', 'marginBottom', 'marginLeft'].forEach(prop => {
                     const value = style.getPropertyValue(prop.replace(/([A-Z])/g, '-$1').toLowerCase());
-                    if (value && value !== '0px') {
+                    if (value && value !== '0px' && value !== 'auto') {
                         const key = value;
 
                         if (!spacings.has(key)) {
@@ -292,7 +174,7 @@ export class SpacingExtractorStage implements PipelineStage<CrawlResult, Spacing
         });
     }
 
-    private async extractPaddingValues(page: any): Promise<Record<string, ExtractedSpacing>> {
+    private async extractPaddingValues(page: any): Promise<Record<string, any>> {
         return await page.evaluate(() => {
             const spacings = new Map<string, any>();
             const elements = document.querySelectorAll('*');
@@ -325,7 +207,7 @@ export class SpacingExtractorStage implements PipelineStage<CrawlResult, Spacing
         });
     }
 
-    private async extractGapValues(page: any): Promise<Record<string, ExtractedSpacing>> {
+    private async extractGapValues(page: any): Promise<Record<string, any>> {
         return await page.evaluate(() => {
             const spacings = new Map<string, any>();
             const elements = document.querySelectorAll('*');
@@ -358,82 +240,92 @@ export class SpacingExtractorStage implements PipelineStage<CrawlResult, Spacing
         });
     }
 
-    private addToSpacingMap(spacingMap: Map<string, ExtractedSpacing>, spacings: Record<string, any>, category: string, source: string): void {
-        for (const [spacingValue, spacingInfo] of Object.entries(spacings)) {
-            if (spacingMap.has(spacingValue)) {
-                const existing = spacingMap.get(spacingValue)!;
-                existing.usageCount += spacingInfo.usageCount;
-            } else {
-                spacingMap.set(spacingValue, {
-                    ...spacingInfo,
-                    category,
-                    source
-                });
+    private addToSpacingMap(
+        spacingMap: Map<string, ExtractedSpacing>,
+        spacings: Record<string, any>,
+        category: string,
+        sourceUrl: string
+    ): void {
+        for (const [cssValue, spacingInfo] of Object.entries(spacings)) {
+            try {
+                // Convert CSS spacing to spec-compliant DimensionValue
+                const specValue = convertCSSSizeToDimension(cssValue);
+
+                // Use the CSS value as the map key for deduplication
+                const mapKey = cssValue;
+
+                if (spacingMap.has(mapKey)) {
+                    const existing = spacingMap.get(mapKey)!;
+                    existing.usageCount += spacingInfo.usageCount;
+                    // Add source URL if not already tracked
+                    if (!existing.sourceUrls.includes(sourceUrl)) {
+                        existing.sourceUrls.push(sourceUrl);
+                    }
+                } else {
+                    spacingMap.set(mapKey, {
+                        cssValue,
+                        specValue,
+                        property: spacingInfo.property,
+                        element: spacingInfo.element,
+                        usageCount: spacingInfo.usageCount,
+                        category,
+                        sourceUrls: [sourceUrl]
+                    });
+                }
+            } catch (error) {
+                // Skip spacing values that can't be converted
+                logger.warn(`Failed to convert spacing value: ${cssValue}`, { error });
             }
         }
     }
 
     private generateSpacingName(spacing: ExtractedSpacing): string {
-        // Generate a name based on the spacing properties
         const category = spacing.category || 'spacing';
 
-        // Handle special values
-        if (spacing.value === 'auto') {
-            return `${category}-auto`;
+        // Convert to a common scale if possible
+        const { value, unit } = spacing.specValue;
+
+        // For px values, convert to rem-based scale
+        if (unit === 'px') {
+            const remValue = value / 16;  // Assuming 16px = 1rem
+
+            // Map to common spacing scale
+            if (remValue === 0) return `${category}-0`;
+            if (remValue === 0.25) return `${category}-1`;
+            if (remValue === 0.5) return `${category}-2`;
+            if (remValue === 0.75) return `${category}-3`;
+            if (remValue === 1) return `${category}-4`;
+            if (remValue === 1.25) return `${category}-5`;
+            if (remValue === 1.5) return `${category}-6`;
+            if (remValue === 2) return `${category}-8`;
+            if (remValue === 2.5) return `${category}-10`;
+            if (remValue === 3) return `${category}-12`;
+            if (remValue === 4) return `${category}-16`;
         }
 
-        // Extract size in pixels or rems if possible
-        let size = '';
-        let unit = '';
-
-        const sizeMatch = spacing.value.match(/(\d+(?:\.\d+)?)(px|rem|em|%|vh|vw)/);
-        if (sizeMatch) {
-            size = sizeMatch[1];
-            unit = sizeMatch[2];
-
-            // Convert px to rem-based scale if possible
-            if (unit === 'px') {
-                const pxValue = parseFloat(size);
-                if (pxValue % 4 === 0) {
-                    const remValue = pxValue / 16;
-                    if (remValue === 0.25) return `${category}-1`;
-                    if (remValue === 0.5) return `${category}-2`;
-                    if (remValue === 0.75) return `${category}-3`;
-                    if (remValue === 1) return `${category}-4`;
-                    if (remValue === 1.25) return `${category}-5`;
-                    if (remValue === 1.5) return `${category}-6`;
-                    if (remValue === 2) return `${category}-8`;
-                    if (remValue === 2.5) return `${category}-10`;
-                    if (remValue === 3) return `${category}-12`;
-                    if (remValue === 4) return `${category}-16`;
-                }
-            }
-
-            // For rem values, try to match to common scales
-            if (unit === 'rem') {
-                const remValue = parseFloat(size);
-                if (remValue === 0.25) return `${category}-1`;
-                if (remValue === 0.5) return `${category}-2`;
-                if (remValue === 0.75) return `${category}-3`;
-                if (remValue === 1) return `${category}-4`;
-                if (remValue === 1.25) return `${category}-5`;
-                if (remValue === 1.5) return `${category}-6`;
-                if (remValue === 2) return `${category}-8`;
-                if (remValue === 2.5) return `${category}-10`;
-                if (remValue === 3) return `${category}-12`;
-                if (remValue === 4) return `${category}-16`;
-            }
+        // For rem values, direct mapping
+        if (unit === 'rem') {
+            if (value === 0) return `${category}-0`;
+            if (value === 0.25) return `${category}-1`;
+            if (value === 0.5) return `${category}-2`;
+            if (value === 0.75) return `${category}-3`;
+            if (value === 1) return `${category}-4`;
+            if (value === 1.25) return `${category}-5`;
+            if (value === 1.5) return `${category}-6`;
+            if (value === 2) return `${category}-8`;
+            if (value === 2.5) return `${category}-10`;
+            if (value === 3) return `${category}-12`;
+            if (value === 4) return `${category}-16`;
         }
 
-        // Default naming scheme
+        // For gap values, use size-based naming
         if (category === 'gap') {
-            const value = parseFloat(size);
             if (value <= 0.5) return 'gap-sm';
             if (value <= 1) return 'gap-md';
             return 'gap-lg';
         }
 
-        // For other values, use the raw value
-        return `${category}-${spacing.value.replace(/[^a-zA-Z0-9]/g, '-')}`;
+        // Default naming: category-value-unit
+        return `${category}-${value}-${unit}`.toLowerCase();
     }
 }

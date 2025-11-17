@@ -1,0 +1,60 @@
+{
+  "session": {
+    "name": "Small Site-optimized",
+    "totalDuration": "3.14",
+    "startTime": "356694430299791",
+    "timestamp": "2025-09-01T16:16:13.906Z"
+  },
+  "performance": {
+    "totalUrls": 1,
+    "totalErrors": 0,
+    "successRate": "100.0%",
+    "averageThroughput": "0.32"
+  },
+  "phases": [
+    {
+      "name": "total_pipeline",
+      "duration": "3.14",
+      "urls": 1,
+      "successCount": 1,
+      "errorCount": 0,
+      "successRate": "100.0",
+      "throughput": "0.32",
+      "concurrency": "optimized",
+      "browserCount": "pools"
+    }
+  ],
+  "optimization_metrics": {
+    "concurrency": {},
+    "browserPools": {},
+    "memory": {
+      "heapUsed": {
+        "min": 60,
+        "max": 61,
+        "avg": 61
+      },
+      "rss": {
+        "min": 136,
+        "max": 155,
+        "avg": 146
+      },
+      "snapshots": 4
+    },
+    "errors": []
+  },
+  "assessment": {
+    "targetMet": false,
+    "duration": {
+      "actual": "3.14",
+      "target": "80-90s",
+      "meets": false,
+      "improvement": "97.3%"
+    },
+    "reliability": {
+      "actual": "100.0%",
+      "target": "95%",
+      "meets": true
+    },
+    "overall": "NEEDS_IMPROVEMENT"
+  }
+}

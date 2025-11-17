@@ -1,10 +1,18 @@
 // src/core/stages/border-extractor-stage.ts
 // Using ESM syntax
 import { PipelineStage } from '../pipeline.js';
-import { CrawlResult, DesignToken } from '../types.js';
+import { CrawlResult } from '../types.js';
+import { logger } from '../../utils/logger.js';
 import { Browser, chromium } from 'playwright';
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+    convertCSSSizeToDimension,
+    convertCSSBoxShadowToSpec
+} from '../tokens/converters/value-converters.js';
+import { DimensionValue } from '../tokens/types/primitives.js';
+import { BorderStyleValue, ShadowValue } from '../tokens/types/composites.js';
+import { ExtractedTokenData } from '../tokens/generators/spec-generator.js';
 
 interface BorderExtractorOptions {
     includeBorderWidth: boolean;
@@ -12,11 +20,11 @@ interface BorderExtractorOptions {
     includeBorderRadius: boolean;
     includeShadows: boolean;
     outputDir?: string;
-    minOccurrences?: number;
+    minimumOccurrences?: number;
 }
 
 interface BorderExtractionResult {
-    tokens: DesignToken[];
+    tokens: ExtractedTokenData[];
     stats: {
         totalBorders: number;
         uniqueBorders: number;
@@ -28,13 +36,13 @@ interface BorderExtractionResult {
 }
 
 interface ExtractedBorder {
-    value: string;
+    cssValue: string;
+    specValue: DimensionValue | BorderStyleValue | ShadowValue;
     property: string;
     element: string;
     usageCount: number;
-    category?: string;
-    source?: string;
-    name?: string;
+    category: 'width' | 'style' | 'radius' | 'shadow';
+    sourceUrls: string[];
 }
 
 export class BorderExtractorStage implements PipelineStage<CrawlResult, BorderExtractionResult> {
@@ -46,11 +54,11 @@ export class BorderExtractorStage implements PipelineStage<CrawlResult, BorderEx
         includeBorderRadius: true,
         includeShadows: true,
         outputDir: './results',
-        minOccurrences: 2
+        minimumOccurrences: 2
     }) {}
 
     async process(input: CrawlResult): Promise<BorderExtractionResult> {
-        console.log(`Extracting borders from ${input.crawledPages?.length || 0} pages`);
+        logger.info('Extracting borders', { pageCount: input.crawledPages?.length || 0 });
 
         const outputDir = this.options.outputDir || './results';
         const rawOutputDir = path.join(outputDir, 'raw');
@@ -97,161 +105,40 @@ export class BorderExtractorStage implements PipelineStage<CrawlResult, BorderEx
                     }
 
                 } catch (error) {
-                    console.error(`Error extracting borders from ${pageInfo.url}:`, error);
+                    logger.error(`Error extracting borders from ${pageInfo.url}`, { error });
                 }
             }
         } finally {
             await browser.close();
         }
 
-        // If no borders were found, use mock data for now
-        if (borderMap.size === 0) {
-            console.log('No borders found, using mock data');
-            const mockBorders = [
-                {
-                    name: 'border-width-0',
-                    value: '0',
-                    type: 'border',
-                    category: 'width',
-                    usageCount: 85
-                },
-                {
-                    name: 'border-width-1',
-                    value: '1px',
-                    type: 'border',
-                    category: 'width',
-                    usageCount: 156
-                },
-                {
-                    name: 'border-width-2',
-                    value: '2px',
-                    type: 'border',
-                    category: 'width',
-                    usageCount: 42
-                },
-                {
-                    name: 'border-width-4',
-                    value: '4px',
-                    type: 'border',
-                    category: 'width',
-                    usageCount: 15
-                },
-                {
-                    name: 'border-style-solid',
-                    value: 'solid',
-                    type: 'border',
-                    category: 'style',
-                    usageCount: 210
-                },
-                {
-                    name: 'border-style-dashed',
-                    value: 'dashed',
-                    type: 'border',
-                    category: 'style',
-                    usageCount: 28
-                },
-                {
-                    name: 'border-style-dotted',
-                    value: 'dotted',
-                    type: 'border',
-                    category: 'style',
-                    usageCount: 12
-                },
-                {
-                    name: 'border-radius-0',
-                    value: '0',
-                    type: 'border',
-                    category: 'radius',
-                    usageCount: 120
-                },
-                {
-                    name: 'border-radius-sm',
-                    value: '0.25rem',
-                    type: 'border',
-                    category: 'radius',
-                    usageCount: 92
-                },
-                {
-                    name: 'border-radius-md',
-                    value: '0.5rem',
-                    type: 'border',
-                    category: 'radius',
-                    usageCount: 78
-                },
-                {
-                    name: 'border-radius-lg',
-                    value: '1rem',
-                    type: 'border',
-                    category: 'radius',
-                    usageCount: 45
-                },
-                {
-                    name: 'border-radius-full',
-                    value: '9999px',
-                    type: 'border',
-                    category: 'radius',
-                    usageCount: 32
-                },
-                {
-                    name: 'shadow-none',
-                    value: 'none',
-                    type: 'border',
-                    category: 'shadow',
-                    usageCount: 64
-                },
-                {
-                    name: 'shadow-sm',
-                    value: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
-                    type: 'border',
-                    category: 'shadow',
-                    usageCount: 48
-                },
-                {
-                    name: 'shadow-md',
-                    value: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
-                    type: 'border',
-                    category: 'shadow',
-                    usageCount: 36
-                },
-                {
-                    name: 'shadow-lg',
-                    value: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-                    type: 'border',
-                    category: 'shadow',
-                    usageCount: 24
-                },
-            ] as DesignToken[];
+        // Convert the border map to spec-compliant design tokens
+        const borderTokens: ExtractedTokenData[] = [];
 
-            // Add mock data to the map
-            for (const token of mockBorders) {
-                borderMap.set(token.value, {
-                    value: token.value,
-                    property: token.category === 'width' ? 'border-width' :
-                              token.category === 'style' ? 'border-style' :
-                              token.category === 'radius' ? 'border-radius' : 'box-shadow',
-                    element: 'div',
-                    usageCount: token.usageCount || 0,
-                    category: token.category,
-                    name: token.name
-                });
-            }
-        }
+        for (const [key, borderInfo] of borderMap.entries()) {
+            if (borderInfo.usageCount >= (this.options.minimumOccurrences || 2)) {
+                // Generate a name for the border
+                const name = this.generateBorderName(borderInfo);
 
-        // Convert the border map to design tokens
-        const borderTokens: DesignToken[] = [];
-
-        for (const [borderValue, borderInfo] of borderMap.entries()) {
-            if (borderInfo.usageCount >= (this.options.minOccurrences || 2)) {
-                // Generate a name for the border if not already set
-                const name = borderInfo.name || this.generateBorderName(borderInfo);
+                // Determine the token type based on category
+                let tokenType: 'dimension' | 'border' | 'shadow' | 'strokeStyle';
+                if (borderInfo.category === 'width' || borderInfo.category === 'radius') {
+                    tokenType = 'dimension';
+                } else if (borderInfo.category === 'style') {
+                    tokenType = 'strokeStyle';
+                } else {
+                    tokenType = 'shadow';
+                }
 
                 borderTokens.push({
+                    type: tokenType,
                     name,
-                    value: borderValue,
-                    type: 'border',
+                    value: borderInfo.specValue,
                     category: borderInfo.category,
-                    description: `Extracted from ${borderInfo.property} property`,
-                    usageCount: borderInfo.usageCount
+                    description: `${borderInfo.category} extracted from ${borderInfo.sourceUrls.length} page(s)`,
+                    usageCount: borderInfo.usageCount,
+                    source: borderInfo.property,
+                    sourceUrls: borderInfo.sourceUrls
                 });
             }
         }
@@ -277,7 +164,7 @@ export class BorderExtractorStage implements PipelineStage<CrawlResult, BorderEx
         };
     }
 
-    private async extractBorderWidths(page: any): Promise<Record<string, ExtractedBorder>> {
+    private async extractBorderWidths(page: any): Promise<Record<string, any>> {
         return await page.evaluate(() => {
             const borders = new Map<string, any>();
             const elements = document.querySelectorAll('*');
@@ -310,7 +197,7 @@ export class BorderExtractorStage implements PipelineStage<CrawlResult, BorderEx
         });
     }
 
-    private async extractBorderStyles(page: any): Promise<Record<string, ExtractedBorder>> {
+    private async extractBorderStyles(page: any): Promise<Record<string, any>> {
         return await page.evaluate(() => {
             const borders = new Map<string, any>();
             const elements = document.querySelectorAll('*');
@@ -343,7 +230,7 @@ export class BorderExtractorStage implements PipelineStage<CrawlResult, BorderEx
         });
     }
 
-    private async extractBorderRadii(page: any): Promise<Record<string, ExtractedBorder>> {
+    private async extractBorderRadii(page: any): Promise<Record<string, any>> {
         return await page.evaluate(() => {
             const borders = new Map<string, any>();
             const elements = document.querySelectorAll('*');
@@ -376,7 +263,7 @@ export class BorderExtractorStage implements PipelineStage<CrawlResult, BorderEx
         });
     }
 
-    private async extractShadows(page: any): Promise<Record<string, ExtractedBorder>> {
+    private async extractShadows(page: any): Promise<Record<string, any>> {
         return await page.evaluate(() => {
             const shadows = new Map<string, any>();
             const elements = document.querySelectorAll('*');
@@ -407,100 +294,112 @@ export class BorderExtractorStage implements PipelineStage<CrawlResult, BorderEx
         });
     }
 
-    private addToBorderMap(borderMap: Map<string, ExtractedBorder>, borders: Record<string, any>, category: string, source: string): void {
-        for (const [borderValue, borderInfo] of Object.entries(borders)) {
-            if (borderMap.has(borderValue)) {
-                const existing = borderMap.get(borderValue)!;
-                existing.usageCount += borderInfo.usageCount;
-            } else {
-                borderMap.set(borderValue, {
-                    ...borderInfo,
-                    category,
-                    source
-                });
+    private addToBorderMap(
+        borderMap: Map<string, ExtractedBorder>,
+        borders: Record<string, any>,
+        category: 'width' | 'style' | 'radius' | 'shadow',
+        sourceUrl: string
+    ): void {
+        for (const [cssValue, borderInfo] of Object.entries(borders)) {
+            try {
+                // Convert CSS value to spec-compliant format based on category
+                let specValue: DimensionValue | BorderStyleValue | ShadowValue;
+
+                if (category === 'width' || category === 'radius') {
+                    specValue = convertCSSSizeToDimension(cssValue);
+                } else if (category === 'style') {
+                    specValue = cssValue as BorderStyleValue;
+                } else if (category === 'shadow') {
+                    specValue = convertCSSBoxShadowToSpec(cssValue);
+                }
+
+                // Use the CSS value as the map key for deduplication
+                const mapKey = cssValue;
+
+                if (borderMap.has(mapKey)) {
+                    const existing = borderMap.get(mapKey)!;
+                    existing.usageCount += borderInfo.usageCount;
+                    // Add source URL if not already tracked
+                    if (!existing.sourceUrls.includes(sourceUrl)) {
+                        existing.sourceUrls.push(sourceUrl);
+                    }
+                } else {
+                    borderMap.set(mapKey, {
+                        cssValue,
+                        specValue: specValue!,
+                        property: borderInfo.property,
+                        element: borderInfo.element,
+                        usageCount: borderInfo.usageCount,
+                        category,
+                        sourceUrls: [sourceUrl]
+                    });
+                }
+            } catch (error) {
+                // Skip border values that can't be converted
+                logger.warn(`Failed to convert border value: ${cssValue}`, { error });
             }
         }
     }
 
     private generateBorderName(border: ExtractedBorder): string {
-        // Generate a name based on the border properties
-        const category = border.category || 'border';
+        const category = border.category;
 
-        // Handle special values
-        if (border.value === 'none' || border.value === '0px') {
-            return `${category}-none`;
+        // Handle border widths
+        if (category === 'width') {
+            const { value, unit } = border.specValue as DimensionValue;
+
+            // Common border width values
+            if (value === 0) return 'border-width-0';
+            if (value === 1 && unit === 'px') return 'border-width-1';
+            if (value === 2 && unit === 'px') return 'border-width-2';
+            if (value === 4 && unit === 'px') return 'border-width-4';
+
+            return `border-width-${value}-${unit}`;
         }
 
         // Handle border styles
         if (category === 'style') {
-            return `border-style-${border.value}`;
-        }
-
-        // Handle border widths
-        if (category === 'width') {
-            // Extract size in pixels or rems if possible
-            const sizeMatch = border.value.match(/(\d+(?:\.\d+)?)(px|rem|em)/);
-            if (sizeMatch) {
-                const size = sizeMatch[1];
-                const unit = sizeMatch[2];
-
-                // Convert px to rem-based scale if possible
-                if (unit === 'px') {
-                    const pxValue = parseFloat(size);
-                    if (pxValue === 1) return 'border-width-1';
-                    if (pxValue === 2) return 'border-width-2';
-                    if (pxValue === 4) return 'border-width-4';
-                }
-            }
-
-            return `border-width-${border.value.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            return `border-style-${border.specValue}`;
         }
 
         // Handle border radii
         if (category === 'radius') {
-            // Extract size in pixels or rems if possible
-            const sizeMatch = border.value.match(/(\d+(?:\.\d+)?)(px|rem|em|%)/);
-            if (sizeMatch) {
-                const size = parseFloat(sizeMatch[1]);
-                const unit = sizeMatch[2];
+            const { value, unit } = border.specValue as DimensionValue;
 
-                // Check for common radius values
-                if (unit === 'px') {
-                    if (size === 0) return 'border-radius-0';
-                    if (size <= 4) return 'border-radius-sm';
-                    if (size <= 8) return 'border-radius-md';
-                    if (size <= 16) return 'border-radius-lg';
-                    if (size >= 9999) return 'border-radius-full';
-                }
+            // Common radius values
+            if (value === 0) return 'border-radius-0';
 
-                if (unit === 'rem') {
-                    if (size === 0) return 'border-radius-0';
-                    if (size <= 0.25) return 'border-radius-sm';
-                    if (size <= 0.5) return 'border-radius-md';
-                    if (size <= 1) return 'border-radius-lg';
-                }
-
-                if (unit === '%' && size === 50) {
-                    return 'border-radius-full';
-                }
+            // Map to semantic names
+            if (unit === 'rem') {
+                if (value <= 0.25) return 'border-radius-sm';
+                if (value <= 0.5) return 'border-radius-md';
+                if (value <= 1) return 'border-radius-lg';
             }
 
-            return `border-radius-${border.value.replace(/[^a-zA-Z0-9]/g, '-')}`;
+            if (unit === 'px') {
+                if (value <= 4) return 'border-radius-sm';
+                if (value <= 8) return 'border-radius-md';
+                if (value <= 16) return 'border-radius-lg';
+                if (value >= 9999) return 'border-radius-full';
+            }
+
+            return `border-radius-${value}-${unit}`;
         }
 
         // Handle shadows
         if (category === 'shadow') {
-            if (border.value === 'none') return 'shadow-none';
+            const shadowValue = border.specValue as ShadowValue;
+            const blur = shadowValue.blur as DimensionValue;
 
-            // Check for shadow size
-            if (border.value.includes('1px')) return 'shadow-sm';
-            if (border.value.includes('4px')) return 'shadow-md';
-            if (border.value.includes('10px')) return 'shadow-lg';
+            // Map to semantic shadow sizes based on blur
+            if (blur.value <= 2) return 'shadow-sm';
+            if (blur.value <= 8) return 'shadow-md';
+            if (blur.value <= 16) return 'shadow-lg';
 
-            return `shadow-${border.value.substring(0, 20).replace(/[^a-zA-Z0-9]/g, '-')}`;
+            return `shadow-${blur.value}-${blur.unit}`;
         }
 
         // Default naming scheme
-        return `${category}-${border.value.replace(/[^a-zA-Z0-9]/g, '-')}`;
+        return `border-${category}-unknown`;
     }
 }

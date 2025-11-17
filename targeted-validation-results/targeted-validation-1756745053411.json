@@ -1,0 +1,65 @@
+{
+  "timestamp": "2025-09-01T16:44:13.411Z",
+  "validation_type": "targeted",
+  "purpose": "Test optimization effectiveness on appropriately-sized sites",
+  "reference_performance": {
+    "pncb_site": "32.15s (70% improvement)",
+    "baseline": "108s (original)"
+  },
+  "summary": {
+    "tests_run": 3,
+    "successful_tests": 3,
+    "average_improvement": "77.3%",
+    "validation_passed": true,
+    "meets_reference_consistency": true
+  },
+  "detailed_results": [
+    {
+      "site_name": "vuejs-docs",
+      "site_description": "Vue.js documentation - structured, large",
+      "optimized_duration": 9.318,
+      "sequential_duration": 24.693,
+      "improvement": 62.264609403474665,
+      "absolute_improvement": 15.375000000000002,
+      "success": true,
+      "meets_target": true,
+      "meets_minimum": true,
+      "vs_reference_variance": 7.735390596525335
+    },
+    {
+      "site_name": "react-docs",
+      "site_description": "React documentation - complex, many pages",
+      "optimized_duration": 12.103,
+      "sequential_duration": 68.447,
+      "improvement": 82.3177056700805,
+      "absolute_improvement": 56.344,
+      "success": true,
+      "meets_target": true,
+      "meets_minimum": true,
+      "vs_reference_variance": 12.3177056700805
+    },
+    {
+      "site_name": "tailwind-docs",
+      "site_description": "Tailwind CSS docs - content-heavy, structured",
+      "optimized_duration": 10.516,
+      "sequential_duration": 82.157,
+      "improvement": 87.20011684944679,
+      "absolute_improvement": 71.64099999999999,
+      "success": true,
+      "meets_target": true,
+      "meets_minimum": true,
+      "vs_reference_variance": 17.200116849446786
+    }
+  ],
+  "assessment": {
+    "optimization_effectiveness": "GOOD",
+    "consistency_with_reference": "CONSISTENT",
+    "ready_for_production": true
+  },
+  "recommendations": [
+    {
+      "category": "Success",
+      "message": "Optimizations work effectively on target-scale sites"
+    }
+  ]
+}
