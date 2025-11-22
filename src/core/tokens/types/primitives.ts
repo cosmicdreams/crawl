@@ -265,3 +265,35 @@ export function isFontWeightValue(value: any): value is FontWeightValue {
     }
     return false;
 }
+
+// ============================================================================
+// SAFE VALUE EXTRACTORS
+// ============================================================================
+
+/**
+ * Safely extract DimensionValue from TokenValue, with default fallback.
+ */
+export function getDimensionValue(value: any, defaultValue: DimensionValue = { value: 0, unit: 'px' }): DimensionValue {
+    return isDimensionValue(value) ? value : defaultValue;
+}
+
+/**
+ * Safely extract DurationValue from TokenValue, with default fallback.
+ */
+export function getDurationValue(value: any, defaultValue: DurationValue = { value: 0, unit: 'ms' }): DurationValue {
+    return isDurationValue(value) ? value : defaultValue;
+}
+
+/**
+ * Safely extract CubicBezierValue from TokenValue, with default fallback.
+ */
+export function getCubicBezierValue(value: any, defaultValue: CubicBezierValue = [0, 0, 1, 1]): CubicBezierValue {
+    return isCubicBezierValue(value) ? value : defaultValue;
+}
+
+/**
+ * Safely extract FontFamilyValue from TokenValue, with default fallback.
+ */
+export function getFontFamilyValue(value: any, defaultValue: FontFamilyValue = 'sans-serif'): FontFamilyValue {
+    return isFontFamilyValue(value) ? value : defaultValue;
+}

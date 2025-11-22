@@ -10,7 +10,7 @@ import {
     convertCSSTimeToDuration,
     convertCSSTimingFunctionToCubicBezier
 } from '../tokens/converters/value-converters.js';
-import { CubicBezierValue } from '../tokens/types/primitives.js';
+import { CubicBezierValue, DurationValue, isDurationValue } from '../tokens/types/primitives.js';
 import { TransitionValue } from '../tokens/types/composites.js';
 import { ExtractedTokenData } from '../tokens/generators/spec-generator.js';
 
@@ -172,8 +172,8 @@ export class AnimationExtractorStage implements PipelineStage<CrawlResult, Anima
                             usageCount: 1
                         });
                     } else {
-                        const existing = transitions.get(key);
-                        existing.usageCount += 1;
+                        const existing = transitions.get(key) as { usageCount: number } | undefined;
+                        if (existing) existing.usageCount += 1;
                     }
                 }
             });
@@ -210,8 +210,8 @@ export class AnimationExtractorStage implements PipelineStage<CrawlResult, Anima
                             usageCount: 1
                         });
                     } else {
-                        const existing = animations.get(key);
-                        existing.usageCount += 1;
+                        const existing = animations.get(key) as { usageCount: number } | undefined;
+                        if (existing) existing.usageCount += 1;
                     }
                 }
             });
@@ -275,19 +275,22 @@ export class AnimationExtractorStage implements PipelineStage<CrawlResult, Anima
 
         // Generate semantic names based on duration
         let speedName = 'default';
-        if (duration.unit === 's') {
-            if (duration.value <= 0.2) speedName = 'instant';
-            else if (duration.value <= 0.3) speedName = 'fast';
-            else if (duration.value <= 0.5) speedName = 'normal';
-            else if (duration.value <= 1.0) speedName = 'slow';
-            else speedName = 'very-slow';
-        } else if (duration.unit === 'ms') {
-            const seconds = duration.value / 1000;
-            if (seconds <= 0.2) speedName = 'instant';
-            else if (seconds <= 0.3) speedName = 'fast';
-            else if (seconds <= 0.5) speedName = 'normal';
-            else if (seconds <= 1.0) speedName = 'slow';
-            else speedName = 'very-slow';
+        // Type guard: duration can be DurationValue, TokenReference, or JSONPointerReference
+        if (isDurationValue(duration)) {
+            if (duration.unit === 's') {
+                if (duration.value <= 0.2) speedName = 'instant';
+                else if (duration.value <= 0.3) speedName = 'fast';
+                else if (duration.value <= 0.5) speedName = 'normal';
+                else if (duration.value <= 1.0) speedName = 'slow';
+                else speedName = 'very-slow';
+            } else if (duration.unit === 'ms') {
+                const seconds = duration.value / 1000;
+                if (seconds <= 0.2) speedName = 'instant';
+                else if (seconds <= 0.3) speedName = 'fast';
+                else if (seconds <= 0.5) speedName = 'normal';
+                else if (seconds <= 1.0) speedName = 'slow';
+                else speedName = 'very-slow';
+            }
         }
 
         // Generate semantic names based on timing function

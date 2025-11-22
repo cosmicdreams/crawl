@@ -9,7 +9,13 @@ import { ExtractedTokenData } from '../tokens/generators/spec-generator.js';
 import {
     ColorValue,
     DimensionValue,
-    CubicBezierValue
+    DurationValue,
+    CubicBezierValue,
+    getDimensionValue,
+    getDurationValue,
+    getCubicBezierValue,
+    getFontFamilyValue,
+    isColorValue
 } from '../tokens/types/primitives.js';
 import {
     TypographyValue,
@@ -732,22 +738,33 @@ module.exports = {
     private formatTokenValue(token: ExtractedTokenData): string {
         if (token.type === 'color') {
             const colorValue = token.value as ColorValue;
-            return colorValue.hex || `rgba(${colorValue.r}, ${colorValue.g}, ${colorValue.b}, ${colorValue.alpha})`;
+            if (colorValue.hex) {
+                return colorValue.hex;
+            }
+            // ColorValue uses components: [r, g, b] not separate properties
+            const [r, g, b] = colorValue.components.map(c => Math.round(c * 255));
+            const alpha = colorValue.alpha ?? 1;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         }
 
         if (token.type === 'typography') {
             const typValue = token.value as TypographyValue;
-            return `${typValue.fontFamily[0]}, ${typValue.fontSize.value}${typValue.fontSize.unit}`;
+            const fontFamily = getFontFamilyValue(typValue.fontFamily);
+            const fontFamilyStr = Array.isArray(fontFamily) ? fontFamily[0] : fontFamily;
+            const fontSize = getDimensionValue(typValue.fontSize, { value: 16, unit: 'px' });
+            return `${fontFamilyStr}, ${fontSize.value}${fontSize.unit}`;
         }
 
         if (token.type === 'dimension') {
-            const dimValue = token.value as DimensionValue;
+            const dimValue = getDimensionValue(token.value, { value: 0, unit: 'px' });
             return `${dimValue.value}${dimValue.unit}`;
         }
 
         if (token.type === 'transition') {
             const transValue = token.value as TransitionValue;
-            return `${transValue.duration.value}${transValue.duration.unit} ${this.formatCubicBezier(transValue.timingFunction)}`;
+            const duration = getDurationValue(transValue.duration, { value: 0, unit: 'ms' });
+            const timingFn = getCubicBezierValue(transValue.timingFunction);
+            return `${duration.value}${duration.unit} ${this.formatCubicBezier(timingFn)}`;
         }
 
         return JSON.stringify(token.value);

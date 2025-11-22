@@ -127,6 +127,30 @@ export interface PageInfo {
 }
 
 /**
+ * Token types aligned with Design Tokens Specification 2025.10.
+ * Includes both primitive and composite types.
+ */
+export type DesignTokenType =
+    // Primitive types
+    | 'color'
+    | 'dimension'
+    | 'fontFamily'
+    | 'fontWeight'
+    | 'duration'
+    | 'cubicBezier'
+    | 'number'
+    // Composite types
+    | 'border'
+    | 'shadow'
+    | 'transition'
+    | 'strokeStyle'
+    | 'gradient'
+    | 'typography'
+    // Legacy types (for backward compatibility)
+    | 'spacing'
+    | 'animation';
+
+/**
  * Represents a design token extracted from a website.
  */
 export interface DesignToken {
@@ -135,7 +159,7 @@ export interface DesignToken {
     /** CSS value of the token */
     value: string;
     /** Type category of the design token */
-    type: 'color' | 'typography' | 'spacing' | 'border' | 'animation';
+    type: DesignTokenType;
     /** Sub-category within the type */
     category?: string;
     /** Human-readable description */

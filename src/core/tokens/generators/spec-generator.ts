@@ -12,6 +12,7 @@ import {
     TokenDocument,
     TokenGroup,
     Token,
+    TokenType,
     validateTokenName,
     CRAWLER_EXTENSION_NAMESPACE,
     createCrawlerExtensions,
@@ -35,7 +36,7 @@ import {
  * Input token data from extractors (before conversion to spec format).
  */
 export interface ExtractedTokenData {
-    type: 'color' | 'spacing' | 'typography' | 'border' | 'animation';
+    type: TokenType | 'spacing' | 'animation';  // TokenType plus legacy types
     name: string;
     value: any; // Value in spec format (already converted)
     category?: string;
@@ -345,16 +346,26 @@ export class SpecCompliantTokenGenerator {
     /**
      * Map internal type names to spec type names.
      */
-    private mapTypeToSpec(type: string): string {
-        const typeMap: Record<string, string> = {
+    private mapTypeToSpec(type: string): TokenType {
+        const typeMap: Record<string, TokenType> = {
             color: 'color',
             spacing: 'dimension',
             typography: 'typography',
             border: 'border',
-            animation: 'duration' // Default for animations
+            animation: 'duration', // Default for animations
+            dimension: 'dimension',
+            transition: 'transition',
+            shadow: 'shadow',
+            strokeStyle: 'strokeStyle',
+            gradient: 'gradient',
+            fontFamily: 'fontFamily',
+            fontWeight: 'fontWeight',
+            duration: 'duration',
+            cubicBezier: 'cubicBezier',
+            number: 'number'
         };
 
-        return typeMap[type] || type;
+        return typeMap[type] || (type as TokenType);
     }
 
     /**

@@ -9,7 +9,11 @@ import { ExtractedTokenData } from '../tokens/generators/spec-generator.js';
 import {
     ColorValue,
     DimensionValue,
-    CubicBezierValue
+    DurationValue,
+    CubicBezierValue,
+    isDurationValue,
+    isCubicBezierValue,
+    getDimensionValue
 } from '../tokens/types/primitives.js';
 import {
     TypographyValue,
@@ -169,13 +173,14 @@ export class StyleguideGenerator {
                 const hex = colorValue.hex;
                 const alpha = colorValue.alpha;
 
+                const alphaValue = alpha ?? 1;
                 html += `
                     <div class="color-card">
-                        <div class="color-swatch" style="background-color: ${hex}; opacity: ${alpha};"></div>
+                        <div class="color-swatch" style="background-color: ${hex}; opacity: ${alphaValue};"></div>
                         <div class="color-info">
                             <div class="token-name">${token.name}</div>
                             <div class="token-value">${hex}</div>
-                            ${alpha < 1 ? `<div class="token-alpha">Alpha: ${(alpha * 100).toFixed(0)}%</div>` : ''}
+                            ${alphaValue < 1 ? `<div class="token-alpha">Alpha: ${(alphaValue * 100).toFixed(0)}%</div>` : ''}
                             <div class="token-colorspace">${colorValue.colorSpace}</div>
                             ${this.options.includeUsageStats ? `<div class="token-usage">Used ${token.usageCount} times</div>` : ''}
                         </div>
@@ -209,14 +214,20 @@ export class StyleguideGenerator {
                 ? typographyValue.fontFamily.join(', ')
                 : typographyValue.fontFamily;
 
+            // Safely extract dimension values
+            const fontSize = getDimensionValue(typographyValue.fontSize, { value: 16, unit: 'px' });
+            const letterSpacing = typographyValue.letterSpacing
+                ? getDimensionValue(typographyValue.letterSpacing, { value: 0, unit: 'px' })
+                : null;
+
             html += `
                 <div class="typography-card">
                     <div class="typography-sample" style="
                         font-family: ${fontFamily};
-                        font-size: ${typographyValue.fontSize.value}${typographyValue.fontSize.unit};
+                        font-size: ${fontSize.value}${fontSize.unit};
                         font-weight: ${typographyValue.fontWeight};
                         line-height: ${typographyValue.lineHeight};
-                        ${typographyValue.letterSpacing ? `letter-spacing: ${typographyValue.letterSpacing.value}${typographyValue.letterSpacing.unit};` : ''}
+                        ${letterSpacing ? `letter-spacing: ${letterSpacing.value}${letterSpacing.unit};` : ''}
                     ">
                         The quick brown fox jumps over the lazy dog
                     </div>
@@ -224,10 +235,10 @@ export class StyleguideGenerator {
                         <div class="token-name">${token.name}</div>
                         <div class="typography-details">
                             <div>Font: ${fontFamily}</div>
-                            <div>Size: ${typographyValue.fontSize.value}${typographyValue.fontSize.unit}</div>
+                            <div>Size: ${fontSize.value}${fontSize.unit}</div>
                             <div>Weight: ${typographyValue.fontWeight}</div>
                             <div>Line Height: ${typographyValue.lineHeight}</div>
-                            ${typographyValue.letterSpacing ? `<div>Letter Spacing: ${typographyValue.letterSpacing.value}${typographyValue.letterSpacing.unit}</div>` : ''}
+                            ${letterSpacing ? `<div>Letter Spacing: ${letterSpacing.value}${letterSpacing.unit}</div>` : ''}
                         </div>
                         ${this.options.includeUsageStats ? `<div class="token-usage">Used ${token.usageCount} times</div>` : ''}
                     </div>
@@ -405,7 +416,17 @@ export class StyleguideGenerator {
 
         tokens.forEach(token => {
             const shadowValue = token.value as ShadowValue;
-            const boxShadow = `${shadowValue.offsetX.value}${shadowValue.offsetX.unit} ${shadowValue.offsetY.value}${shadowValue.offsetY.unit} ${shadowValue.blur.value}${shadowValue.blur.unit} ${shadowValue.spread.value}${shadowValue.spread.unit} ${shadowValue.color.hex}`;
+
+            // Safely extract dimension values
+            const offsetX = getDimensionValue(shadowValue.offsetX, { value: 0, unit: 'px' });
+            const offsetY = getDimensionValue(shadowValue.offsetY, { value: 0, unit: 'px' });
+            const blur = getDimensionValue(shadowValue.blur, { value: 0, unit: 'px' });
+            const spread = getDimensionValue(shadowValue.spread, { value: 0, unit: 'px' });
+            const colorHex = typeof shadowValue.color === 'object' && 'hex' in shadowValue.color
+                ? shadowValue.color.hex || '#000000'
+                : '#000000';
+
+            const boxShadow = `${offsetX.value}${offsetX.unit} ${offsetY.value}${offsetY.unit} ${blur.value}${blur.unit} ${spread.value}${spread.unit} ${colorHex}`;
 
             html += `
                 <div class="shadow-card">
@@ -415,10 +436,10 @@ export class StyleguideGenerator {
                     <div class="shadow-info">
                         <div class="token-name">${token.name}</div>
                         <div class="shadow-details">
-                            <div>Offset: ${shadowValue.offsetX.value}${shadowValue.offsetX.unit}, ${shadowValue.offsetY.value}${shadowValue.offsetY.unit}</div>
-                            <div>Blur: ${shadowValue.blur.value}${shadowValue.blur.unit}</div>
-                            <div>Spread: ${shadowValue.spread.value}${shadowValue.spread.unit}</div>
-                            <div>Color: ${shadowValue.color.hex}</div>
+                            <div>Offset: ${offsetX.value}${offsetX.unit}, ${offsetY.value}${offsetY.unit}</div>
+                            <div>Blur: ${blur.value}${blur.unit}</div>
+                            <div>Spread: ${spread.value}${spread.unit}</div>
+                            <div>Color: ${colorHex}</div>
                         </div>
                         ${this.options.includeUsageStats ? `<div class="token-usage">Used ${token.usageCount} times</div>` : ''}
                     </div>
@@ -450,23 +471,35 @@ export class StyleguideGenerator {
 
             categoryTokens.forEach(token => {
                 const transitionValue = token.value as TransitionValue;
-                const timingFunction = `cubic-bezier(${(transitionValue.timingFunction as CubicBezierValue).join(', ')})`;
+
+                // Safely extract duration values with type guards
+                const duration = isDurationValue(transitionValue.duration)
+                    ? transitionValue.duration
+                    : { value: 0, unit: 'ms' as const };
+                const delay = isDurationValue(transitionValue.delay)
+                    ? transitionValue.delay
+                    : { value: 0, unit: 'ms' as const };
+                const timingFn = isCubicBezierValue(transitionValue.timingFunction)
+                    ? transitionValue.timingFunction
+                    : [0, 0, 1, 1] as CubicBezierValue;
+
+                const timingFunction = `cubic-bezier(${timingFn.join(', ')})`;
 
                 html += `
                     <div class="animation-card">
                         <div class="animation-visual">
                             <div class="animation-sample"
-                                 data-duration="${transitionValue.duration.value}${transitionValue.duration.unit}"
+                                 data-duration="${duration.value}${duration.unit}"
                                  data-timing="${timingFunction}"
-                                 style="transition: transform ${transitionValue.duration.value}${transitionValue.duration.unit} ${timingFunction};">
+                                 style="transition: transform ${duration.value}${duration.unit} ${timingFunction};">
                                 Hover to see animation
                             </div>
                         </div>
                         <div class="animation-info">
                             <div class="token-name">${token.name}</div>
                             <div class="animation-details">
-                                <div>Duration: ${transitionValue.duration.value}${transitionValue.duration.unit}</div>
-                                <div>Delay: ${transitionValue.delay.value}${transitionValue.delay.unit}</div>
+                                <div>Duration: ${duration.value}${duration.unit}</div>
+                                <div>Delay: ${delay.value}${delay.unit}</div>
                                 <div>Timing: ${timingFunction}</div>
                             </div>
                             ${this.options.includeUsageStats ? `<div class="token-usage">Used ${token.usageCount} times</div>` : ''}
